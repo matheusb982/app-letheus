@@ -34,21 +34,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: user._id.toString(),
           email: user.email,
           name: user.fullname,
+          periodId: user.period_id?.toString() ?? null,
         };
       },
     }),
   ],
   callbacks: {
     ...authConfig.callbacks,
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.userId = user.id;
+        token.periodId = (user as Record<string, unknown>).periodId as string | null;
+      }
+      // Allow updating periodId from client via update()
+      if (trigger === "update" && session?.periodId) {
+        token.periodId = session.periodId;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.userId as string;
+        session.user.periodId = token.periodId as string | null;
       }
       return session;
     },
@@ -64,6 +71,7 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
+      periodId: string | null;
     };
   }
 }

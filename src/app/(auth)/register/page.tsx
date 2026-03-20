@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { loginAction, type ActionState } from "@/lib/actions/auth-actions";
+import { registerAction, type ActionState } from "@/lib/actions/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +18,14 @@ import { Loader2 } from "lucide-react";
 
 const initialState: ActionState = {};
 
-export default function LoginPage() {
-  const [state, formAction, isPending] = useActionState(loginAction, initialState);
+export default function RegisterPage() {
+  const [state, formAction, isPending] = useActionState(registerAction, initialState);
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Letheus</CardTitle>
-        <CardDescription>Faça login para acessar sua conta</CardDescription>
+        <CardTitle className="text-2xl">Criar Conta</CardTitle>
+        <CardDescription>Preencha os dados para se cadastrar</CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="space-y-4">
@@ -34,6 +34,17 @@ export default function LoginPage() {
               {state.error}
             </div>
           )}
+          <div className="space-y-2">
+            <Label htmlFor="fullname">Nome completo</Label>
+            <Input
+              id="fullname"
+              name="fullname"
+              type="text"
+              placeholder="Seu nome"
+              required
+              autoComplete="name"
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -51,31 +62,34 @@ export default function LoginPage() {
               id="password"
               name="password"
               type="password"
-              placeholder="••••••"
+              placeholder="Mínimo 6 caracteres"
               required
-              autoComplete="current-password"
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar senha</Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              placeholder="Repita a senha"
+              required
+              autoComplete="new-password"
             />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending && <Loader2 className="animate-spin" />}
-            Entrar
+            Criar conta
           </Button>
-          <div className="flex justify-between w-full text-sm">
-            <Link
-              href="/forgot-password"
-              className="text-muted-foreground hover:text-primary"
-            >
-              Esqueci minha senha
-            </Link>
-            <Link
-              href="/register"
-              className="text-muted-foreground hover:text-primary"
-            >
-              Criar conta
-            </Link>
-          </div>
+          <Link
+            href="/login"
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
+            Já tem uma conta? Faça login
+          </Link>
         </CardFooter>
       </form>
     </Card>
