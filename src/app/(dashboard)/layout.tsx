@@ -1,17 +1,18 @@
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 border-r bg-sidebar p-4">
-        <h2 className="text-lg font-bold mb-4">Letheus</h2>
-        <nav className="space-y-2 text-sm text-muted-foreground">
-          <p>Sidebar - em construção</p>
-        </nav>
-      </aside>
-      <main className="flex-1 p-6">{children}</main>
+    <div className="flex h-screen">
+      <Sidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      </div>
     </div>
   );
 }
