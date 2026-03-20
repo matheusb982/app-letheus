@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, BarChart3 } from "lucide-react";
+import { ImportDialog } from "@/components/purchases/import-dialog";
 import { getPurchases, deletePurchase } from "@/lib/actions/purchase-actions";
 import { getCurrentPeriod } from "@/lib/actions/period-actions";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
@@ -34,6 +35,7 @@ export default async function PurchasesPage({
           {period && <p className="text-muted-foreground mt-1">{period.label}</p>}
         </div>
         <div className="flex gap-2">
+          <ImportDialog />
           <Button variant="outline" asChild>
             <Link href="/purchases/annual-chart">
               <BarChart3 className="mr-2 h-4 w-4" />
