@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -165,8 +166,8 @@ export function CategoriesClient({ categories }: Props) {
           </TableHeader>
           <TableBody>
             {categories.map((cat) => (
-              <>
-                <TableRow key={cat.id}>
+              <React.Fragment key={cat.id}>
+                <TableRow>
                   <TableCell>
                     <Button
                       variant="ghost"
@@ -263,7 +264,7 @@ export function CategoriesClient({ categories }: Props) {
                       </TableCell>
                     </TableRow>
                   ))}
-              </>
+              </React.Fragment>
             ))}
           </TableBody>
         </Table>
