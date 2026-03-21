@@ -55,8 +55,9 @@ export async function POST(req: Request) {
   if (cached) {
     // Save to chat history
     await saveConversation(session.user.id, chatSessionId, userMessage, cached.answer);
-    return new Response(JSON.stringify({ cached: true, content: cached.answer }), {
-      headers: { "Content-Type": "application/json" },
+    // Return as text stream so useChat can process it
+    return new Response(cached.answer, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   }
 
@@ -117,26 +118,34 @@ ${financialContext}
 
 ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
-  const result = streamText({
-    model: google("gemini-2.5-flash"),
-    system: systemPrompt,
-    messages,
-    temperature: 0.2,
-    maxOutputTokens: 1024,
-    async onFinish({ text }) {
-      // Save conversation and cache
-      await saveConversation(session!.user.id, chatSessionId, userMessage, text);
-      await CachedResponse.create({
-        user_id: session!.user.id,
-        question_hash: questionHash,
-        question: userMessage,
-        answer: text,
-        expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours
-      });
-    },
-  });
+  try {
+    const result = streamText({
+      model: google("gemini-2.5-flash-preview-05-20"),
+      system: systemPrompt,
+      messages,
+      temperature: 0.2,
+      maxOutputTokens: 1024,
+      async onFinish({ text }) {
+        // Save conversation and cache
+        await saveConversation(session!.user.id, chatSessionId, userMessage, text);
+        await CachedResponse.create({
+          user_id: session!.user.id,
+          question_hash: questionHash,
+          question: userMessage,
+          answer: text,
+          expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours
+        });
+      },
+    });
 
-  return result.toTextStreamResponse();
+    return result.toTextStreamResponse();
+  } catch (error) {
+    console.error("Chat API error:", error);
+    return new Response(
+      JSON.stringify({ error: "Erro ao processar sua pergunta. Tente novamente." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 }
 
 function buildFinancialContext(
