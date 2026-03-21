@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
   Shield,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { isAdmin as checkIsAdmin } from "@/lib/actions/admin-actions";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,8 +27,13 @@ const navItems = [
   { href: "/chat", label: "Assistente IA", icon: MessageCircle },
 ];
 
-export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
+export function Sidebar() {
   const pathname = usePathname();
+  const [admin, setAdmin] = useState(false);
+
+  useEffect(() => {
+    checkIsAdmin().then(setAdmin);
+  }, []);
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r bg-sidebar">
@@ -57,7 +64,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
           );
         })}
       </nav>
-      {isAdmin && (
+      {admin && (
         <>
           <Separator />
           <nav className="px-3 py-3">
