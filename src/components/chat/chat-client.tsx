@@ -9,6 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Plus,
   Trash2,
   Send,
@@ -17,6 +22,7 @@ import {
   User,
   Sparkles,
   ArrowUp,
+  Lightbulb,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -33,6 +39,17 @@ interface ChatClientProps {
   initialMessages: SerializedChatMessage[];
   chatLimit: { used: number; limit: number };
 }
+
+const POPOVER_SUGGESTIONS = [
+  "Qual foi meu maior gasto este mês?",
+  "Como estou em relação às minhas metas?",
+  "Qual o percentual de gastos por categoria?",
+  "Dê dicas para economizar este mês.",
+  "Resuma minha situação financeira.",
+  "Quais categorias estouraram a meta?",
+  "Compare meus gastos com o mês anterior.",
+  "Qual meu saldo disponível?",
+];
 
 const SUGGESTIONS = [
   {
@@ -344,6 +361,42 @@ export function ChatClient({
                   onSubmit={handleSubmit}
                   className="relative flex items-end rounded-2xl border bg-muted/50 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background transition-shadow"
                 >
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute left-1 bottom-1.5 h-8 w-8 rounded-lg text-muted-foreground hover:text-primary"
+                      >
+                        <Lightbulb className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      side="top"
+                      align="start"
+                      className="w-80 p-2"
+                    >
+                      <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        Sugestões de perguntas
+                      </p>
+                      <div className="space-y-0.5">
+                        {POPOVER_SUGGESTIONS.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            className="w-full rounded-md px-2 py-2 text-left text-sm hover:bg-accent transition-colors"
+                            onClick={() => {
+                              setInput(suggestion);
+                              textareaRef.current?.focus();
+                            }}
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Textarea
                     ref={textareaRef}
                     value={input}
@@ -355,7 +408,7 @@ export function ChatClient({
                         : "Pergunte sobre suas finanças..."
                     }
                     rows={1}
-                    className="min-h-[44px] max-h-[150px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pr-12"
+                    className="min-h-[44px] max-h-[150px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-10 pr-12"
                     disabled={isLoading || isAtLimit}
                   />
                   <Button
