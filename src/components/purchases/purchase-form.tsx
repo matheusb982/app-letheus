@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { SerializedPurchase } from "@/lib/actions/purchase-actions";
 import type { SerializedSubcategory } from "@/lib/actions/category-actions";
@@ -19,23 +18,22 @@ interface PurchaseFormProps {
   purchase?: SerializedPurchase;
   subcategories: SerializedSubcategory[];
   action: (data: FormData) => Promise<{ error?: string; success?: boolean }>;
+  onSuccess?: () => void;
 }
 
-export function PurchaseForm({ purchase, subcategories, action }: PurchaseFormProps) {
-  const router = useRouter();
-
+export function PurchaseForm({ purchase, subcategories, action, onSuccess }: PurchaseFormProps) {
   async function handleSubmit(formData: FormData) {
     const result = await action(formData);
     if (result.error) {
       toast.error(result.error);
     } else {
       toast.success(purchase ? "Despesa atualizada!" : "Despesa criada!");
-      router.push("/purchases");
+      onSuccess?.();
     }
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4 max-w-lg">
+    <form action={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="subcategory_id">Subcategoria</Label>
         <Select name="subcategory_id" defaultValue={purchase?.subcategory_id}>

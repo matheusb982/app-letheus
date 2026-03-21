@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { SerializedSubcategory } from "@/lib/actions/category-actions";
 
@@ -19,7 +18,7 @@ interface SubcategoryEntityFormProps {
   subcategories: SerializedSubcategory[];
   action: (data: FormData) => Promise<{ error?: string; success?: boolean }>;
   entityName: string;
-  returnPath: string;
+  onSuccess?: () => void;
 }
 
 export function SubcategoryEntityForm({
@@ -27,22 +26,20 @@ export function SubcategoryEntityForm({
   subcategories,
   action,
   entityName,
-  returnPath,
+  onSuccess,
 }: SubcategoryEntityFormProps) {
-  const router = useRouter();
-
   async function handleSubmit(formData: FormData) {
     const result = await action(formData);
     if (result.error) {
       toast.error(result.error);
     } else {
       toast.success(entity ? `${entityName} atualizado!` : `${entityName} criado!`);
-      router.push(returnPath);
+      onSuccess?.();
     }
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4 max-w-lg">
+    <form action={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="subcategory_id">Subcategoria</Label>
         <Select name="subcategory_id" defaultValue={entity?.subcategory_id}>

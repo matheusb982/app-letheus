@@ -3,30 +3,28 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/submit-button";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { SerializedRevenue } from "@/lib/actions/revenue-actions";
 
 interface RevenueFormProps {
   revenue?: SerializedRevenue;
   action: (data: FormData) => Promise<{ error?: string; success?: boolean }>;
+  onSuccess?: () => void;
 }
 
-export function RevenueForm({ revenue, action }: RevenueFormProps) {
-  const router = useRouter();
-
+export function RevenueForm({ revenue, action, onSuccess }: RevenueFormProps) {
   async function handleSubmit(formData: FormData) {
     const result = await action(formData);
     if (result.error) {
       toast.error(result.error);
     } else {
       toast.success(revenue ? "Receita atualizada!" : "Receita criada!");
-      router.push("/revenues");
+      onSuccess?.();
     }
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4 max-w-lg">
+    <form action={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Nome</Label>
         <Input id="name" name="name" defaultValue={revenue?.name} required />
