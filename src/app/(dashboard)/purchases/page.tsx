@@ -1,6 +1,6 @@
 import { getPurchases, type SerializedPurchase } from "@/lib/actions/purchase-actions";
 import { getCurrentPeriod } from "@/lib/actions/period-actions";
-import { getSubcategoriesByType, type SerializedSubcategory } from "@/lib/actions/category-actions";
+import { getSubcategoriesByType } from "@/lib/actions/category-actions";
 import { PurchasesClient } from "@/components/purchases/purchases-client";
 
 export default async function PurchasesPage({

@@ -51,9 +51,10 @@ Onde a chave é o índice da despesa e o valor é o ID da subcategoria correspon
 
   try {
     const { text } = await generateText({
-      model: google("gemini-2.5-flash", {
-        thinkingConfig: { thinkingBudget: 0 },
-      }),
+      model: google("gemini-2.5-flash"),
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      },
       prompt,
       temperature: 0.1,
       maxOutputTokens: 4096,

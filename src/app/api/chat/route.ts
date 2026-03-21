@@ -124,9 +124,10 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
   try {
     const result = streamText({
-      model: google("gemini-2.5-flash", {
-        thinkingConfig: { thinkingBudget: 2048 },
-      }),
+      model: google("gemini-2.5-flash"),
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: 2048 } },
+      },
       system: systemPrompt,
       messages,
       maxOutputTokens: 4096,
