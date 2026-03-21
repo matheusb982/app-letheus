@@ -37,6 +37,22 @@ export function PurchaseForm({ purchase, subcategories, action }: PurchaseFormPr
   return (
     <form action={handleSubmit} className="space-y-4 max-w-lg">
       <div className="space-y-2">
+        <Label htmlFor="subcategory_id">Subcategoria</Label>
+        <Select name="subcategory_id" defaultValue={purchase?.subcategory_id}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            {subcategories.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="value">Valor</Label>
         <Input
           id="value"
@@ -68,22 +84,6 @@ export function PurchaseForm({ purchase, subcategories, action }: PurchaseFormPr
           <SelectContent>
             <SelectItem value="debit">Débito</SelectItem>
             <SelectItem value="credit">Crédito</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="subcategory_id">Subcategoria</Label>
-        <Select name="subcategory_id" defaultValue={purchase?.subcategory_id}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione..." />
-          </SelectTrigger>
-          <SelectContent>
-            {subcategories.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
           </SelectContent>
         </Select>
       </div>

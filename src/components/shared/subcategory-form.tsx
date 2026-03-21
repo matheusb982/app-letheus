@@ -44,10 +44,6 @@ export function SubcategoryEntityForm({
   return (
     <form action={handleSubmit} className="space-y-4 max-w-lg">
       <div className="space-y-2">
-        <Label htmlFor="value">Valor</Label>
-        <Input id="value" name="value" type="number" step="0.01" defaultValue={entity?.value} required />
-      </div>
-      <div className="space-y-2">
         <Label htmlFor="subcategory_id">Subcategoria</Label>
         <Select name="subcategory_id" defaultValue={entity?.subcategory_id}>
           <SelectTrigger>
@@ -61,6 +57,10 @@ export function SubcategoryEntityForm({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="value">Valor</Label>
+        <Input id="value" name="value" type="number" step="0.01" defaultValue={entity?.value} required />
       </div>
       <SubmitButton />
     </form>

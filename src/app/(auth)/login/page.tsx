@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { loginAction, type ActionState } from "@/lib/actions/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,20 +61,7 @@ export default function LoginPage() {
             {isPending && <Loader2 className="animate-spin" />}
             Entrar
           </Button>
-          <div className="flex justify-between w-full text-sm">
-            <Link
-              href="/forgot-password"
-              className="text-muted-foreground hover:text-primary"
-            >
-              Esqueci minha senha
-            </Link>
-            <Link
-              href="/register"
-              className="text-muted-foreground hover:text-primary"
-            >
-              Criar conta
-            </Link>
-          </div>
+
         </CardFooter>
       </form>
     </Card>
