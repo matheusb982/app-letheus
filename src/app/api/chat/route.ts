@@ -20,8 +20,13 @@ export async function POST(req: Request) {
   }
 
   await connectDB();
-  const { messages, chatSessionId } = await req.json();
-  const userMessage = messages[messages.length - 1]?.content ?? "";
+  const body = await req.json();
+  const { messages, chatSessionId } = body;
+  // AI SDK v6: content may be in parts, not content field
+  const lastMsg = messages[messages.length - 1];
+  const userMessage = lastMsg?.content ?? lastMsg?.parts?.find((p: {type: string; text?: string}) => p.type === "text")?.text ?? "";
+  console.log("[Chat API] userMessage:", userMessage.slice(0, 50));
+  console.log("[Chat API] messages count:", messages.length);
 
   // Rate limit
   const todayStart = new Date();
@@ -118,6 +123,7 @@ ${financialContext}
 
 ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
+  console.log("[Chat API] calling streamText...");
   try {
     const result = streamText({
       model: google("gemini-2.5-flash", {
@@ -140,9 +146,10 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
       },
     });
 
+    console.log("[Chat API] returning stream response");
     return result.toTextStreamResponse();
   } catch (error) {
-    console.error("Chat API error:", error);
+    console.error("[Chat API] CATCH error:", error);
     return new Response(
       JSON.stringify({ error: "Erro ao processar sua pergunta. Tente novamente." }),
       { status: 500, headers: { "Content-Type": "application/json" } }
