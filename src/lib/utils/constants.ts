@@ -14,3 +14,5 @@ export const APORTE_SUBCATEGORY_IDS = [
 ] as const;
 
 export const FINANCEIRAS_CATEGORY_NAME = "FINANCEIRAS";
+
+export const ADMIN_EMAIL = "matheusb982@gmail.com";
