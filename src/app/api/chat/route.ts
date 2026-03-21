@@ -5,6 +5,8 @@ import { connectDB } from "@/lib/db/connection";
 import { User } from "@/lib/db/models/user";
 import { Purchase, type IPurchase } from "@/lib/db/models/purchase";
 import { Revenue, type IRevenue } from "@/lib/db/models/revenue";
+import { Goal, type IGoal } from "@/lib/db/models/goal";
+import { Patrimony, type IPatrimony } from "@/lib/db/models/patrimony";
 import { ChatMessage } from "@/lib/db/models/chat-message";
 import { ChatSession } from "@/lib/db/models/chat-session";
 import { CachedResponse, type ICachedResponse } from "@/lib/db/models/cached-response";
@@ -88,13 +90,15 @@ export async function POST(req: Request) {
   }
 
   // Get financial data
-  const [purchases, revenues] = await Promise.all([
+  const [purchases, revenues, goals, patrimonies, currentPeriod] = await Promise.all([
     Purchase.find({ period_id: periodId }).lean<IPurchase[]>(),
     Revenue.find({ period_id: periodId }).lean<IRevenue[]>(),
+    Goal.find({ period_id: periodId }).lean<IGoal[]>(),
+    Patrimony.find({ period_id: periodId }).lean<IPatrimony[]>(),
+    Period.findById(periodId).lean<IPeriod>(),
   ]);
 
-  const currentPeriod = await Period.findById(periodId).lean<IPeriod>();
-  const financialContext = buildFinancialContext(purchases, revenues, currentPeriod);
+  const financialContext = buildFinancialContext(purchases, revenues, goals, patrimonies, currentPeriod);
 
   // Get conversation history
   const recentMessages = await ChatMessage.find({ chat_session_id: chatSessionId })
@@ -157,6 +161,8 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 function buildFinancialContext(
   purchases: IPurchase[],
   revenues: IRevenue[],
+  goals: IGoal[],
+  patrimonies: IPatrimony[],
   period: IPeriod | null
 ): string {
   const totalRevenue = revenues.reduce((sum, r) => sum + r.value, 0);
@@ -192,6 +198,23 @@ function buildFinancialContext(
     .map((r) => `  - ${r.name}: R$ ${r.value.toFixed(2)}`)
     .join("\n");
 
+  // Goals comparison
+  const totalGoal = goals.reduce((sum, g) => sum + g.value, 0);
+  const goalLines = goals
+    .map((g) => {
+      const spent = bySubcat.get(g.subcategory_name ?? "") ?? 0;
+      const diff = g.value - spent;
+      const status = diff >= 0 ? "✅ dentro da meta" : "❌ estourou";
+      return `  - ${g.subcategory_name}: Meta R$ ${g.value.toFixed(2)} | Gasto R$ ${spent.toFixed(2)} | ${status} (${diff >= 0 ? "sobra" : "excesso"} R$ ${Math.abs(diff).toFixed(2)})`;
+    })
+    .join("\n");
+
+  // Patrimonies
+  const totalPatrimony = patrimonies.reduce((sum, p) => sum + p.value, 0);
+  const patrimonyLines = patrimonies
+    .map((p) => `  - ${p.subcategory_name}: R$ ${p.value.toFixed(2)}`)
+    .join("\n");
+
   return `PERÍODO: ${period?.name ?? "?"} ${period?.year ?? ""}
 RECEITAS (Total: R$ ${totalRevenue.toFixed(2)}):
 ${revenueLines || "  Nenhuma receita"}
@@ -202,6 +225,12 @@ ${subcatLines || "  Nenhuma despesa"}
 
 Top 5 maiores despesas:
 ${top5 || "  Nenhuma"}
+
+METAS DO MÊS (Total: R$ ${totalGoal.toFixed(2)}):
+${goalLines || "  Nenhuma meta definida"}
+
+PATRIMÔNIO (Total: R$ ${totalPatrimony.toFixed(2)}):
+${patrimonyLines || "  Nenhum patrimônio registrado"}
 
 SALDO: R$ ${balance.toFixed(2)}`;
 }
