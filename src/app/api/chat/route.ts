@@ -120,7 +120,7 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
   try {
     const result = streamText({
-      model: google("gemini-2.5-flash-preview-05-20"),
+      model: google("gemini-2.5-flash"),
       system: systemPrompt,
       messages,
       temperature: 0.2,
