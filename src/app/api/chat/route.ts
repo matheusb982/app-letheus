@@ -25,8 +25,7 @@ export async function POST(req: Request) {
   // AI SDK v6: content may be in parts, not content field
   const lastMsg = messages[messages.length - 1];
   const userMessage = lastMsg?.content ?? lastMsg?.parts?.find((p: {type: string; text?: string}) => p.type === "text")?.text ?? "";
-  console.log("[Chat API] userMessage:", userMessage.slice(0, 50));
-  console.log("[Chat API] messages count:", messages.length);
+
 
   // Rate limit
   const todayStart = new Date();
@@ -123,16 +122,14 @@ ${financialContext}
 
 ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
-  console.log("[Chat API] calling streamText...");
   try {
     const result = streamText({
       model: google("gemini-2.5-flash", {
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: { thinkingBudget: 2048 },
       }),
       system: systemPrompt,
       messages,
-      temperature: 0.2,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 4096,
       async onFinish({ text }) {
         // Save conversation and cache
         await saveConversation(session!.user.id, chatSessionId, userMessage, text);
@@ -146,10 +143,9 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
       },
     });
 
-    console.log("[Chat API] returning stream response");
     return result.toTextStreamResponse();
   } catch (error) {
-    console.error("[Chat API] CATCH error:", error);
+    console.error("Chat API error:", error);
     return new Response(
       JSON.stringify({ error: "Erro ao processar sua pergunta. Tente novamente." }),
       { status: 500, headers: { "Content-Type": "application/json" } }
