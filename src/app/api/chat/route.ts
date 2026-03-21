@@ -120,11 +120,13 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
   try {
     const result = streamText({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-flash", {
+        thinkingConfig: { thinkingBudget: 0 },
+      }),
       system: systemPrompt,
       messages,
       temperature: 0.2,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048,
       async onFinish({ text }) {
         // Save conversation and cache
         await saveConversation(session!.user.id, chatSessionId, userMessage, text);

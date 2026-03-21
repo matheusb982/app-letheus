@@ -110,11 +110,16 @@ export function ChatClient({
       parts: [{ type: "text" as const, text: m.content }],
     })),
     onError(error) {
+      console.error("[Chat] error:", error);
       toast.error(error.message || "Erro ao enviar mensagem");
     },
   });
 
   const isLoading = status === "streaming" || status === "submitted";
+  
+  useEffect(() => {
+    console.log("[Chat] status changed:", status, "messages:", messages.length);
+  }, [status, messages.length]);
   const isAtLimit = chatLimit.used >= chatLimit.limit;
 
   useEffect(() => {
@@ -285,14 +290,20 @@ export function ChatClient({
               ) : (
                 <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
                   {messages.map((m) => {
-                    const textContent =
-                      m.parts
-                        ?.filter(
-                          (p): p is { type: "text"; text: string } =>
-                            p.type === "text"
-                        )
-                        .map((p) => p.text)
-                        .join("") || "";
+                    // Extract text: try parts first, then content
+                    let textContent = "";
+                    if (m.parts && m.parts.length > 0) {
+                      textContent = m.parts
+                        .map((p: Record<string, unknown>) => {
+                          if (p.type === "text" && typeof p.text === "string") return p.text;
+                          if (typeof p.text === "string") return p.text;
+                          return "";
+                        })
+                        .join("");
+                    }
+                    if (!textContent && m.content) {
+                      textContent = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+                    }
 
                     const isUser = m.role === "user";
 
