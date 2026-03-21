@@ -43,15 +43,47 @@ interface ChatMsg {
   content: string;
 }
 
-const POPOVER_SUGGESTIONS = [
-  "Qual foi meu maior gasto este mês?",
-  "Como estou em relação às minhas metas?",
-  "Qual o percentual de gastos por categoria?",
-  "Dê dicas para economizar este mês.",
-  "Resuma minha situação financeira.",
-  "Quais categorias estouraram a meta?",
-  "Compare meus gastos com o mês anterior.",
-  "Qual meu saldo disponível?",
+const POPOVER_SUGGESTIONS: { label: string; items: string[] }[] = [
+  {
+    label: "Receitas",
+    items: [
+      "Quanto vai entrar de dinheiro esse mês?",
+      "Quais são minhas fontes de renda?",
+    ],
+  },
+  {
+    label: "Despesas",
+    items: [
+      "Quanto gastei esse mês?",
+      "Onde estou gastando mais?",
+      "Quais minhas maiores despesas?",
+      "Quanto gastei com mercado?",
+    ],
+  },
+  {
+    label: "Análises",
+    items: [
+      "Qual meu saldo do mês?",
+      "Estou gastando mais do que ganho?",
+      "Me dá um resumo financeiro completo",
+    ],
+  },
+  {
+    label: "Dicas",
+    items: [
+      "Como posso economizar?",
+      "Onde posso cortar gastos?",
+      "Me dá dicas financeiras",
+    ],
+  },
+  {
+    label: "Filtros",
+    items: [
+      "Quanto gastei em janeiro de 2025?",
+      "Quanto gastei no débito?",
+      "Quanto gastei na categoria educação?",
+    ],
+  },
 ];
 
 const SUGGESTIONS = [
@@ -355,22 +387,26 @@ export function ChatClient({
                         <Lightbulb className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent side="top" align="start" className="w-80 p-2">
-                      <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                        Sugestões de perguntas
-                      </p>
-                      <div className="space-y-0.5">
-                        {POPOVER_SUGGESTIONS.map((suggestion) => (
-                          <button
-                            key={suggestion}
-                            type="button"
-                            className="w-full rounded-md px-2 py-2 text-left text-sm hover:bg-accent transition-colors"
-                            onClick={() => { setInput(suggestion); textareaRef.current?.focus(); }}
-                          >
-                            {suggestion}
-                          </button>
-                        ))}
-                      </div>
+                    <PopoverContent side="top" align="start" className="w-80 p-2 max-h-80 overflow-y-auto">
+                      {POPOVER_SUGGESTIONS.map((group) => (
+                        <div key={group.label}>
+                          <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                            {group.label}
+                          </p>
+                          <div className="space-y-0.5 mb-1">
+                            {group.items.map((suggestion) => (
+                              <button
+                                key={suggestion}
+                                type="button"
+                                className="w-full rounded-md px-2 py-2 text-left text-sm hover:bg-accent transition-colors"
+                                onClick={() => { setInput(suggestion); textareaRef.current?.focus(); }}
+                              >
+                                {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </PopoverContent>
                   </Popover>
                   <Textarea

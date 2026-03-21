@@ -242,9 +242,10 @@ async function saveConversation(
   answer: string
 ) {
   if (!chatSessionId) return;
+  const now = new Date();
   await ChatMessage.create([
-    { content: question, role: "user", chat_session_id: chatSessionId, user_id: userId },
-    { content: answer, role: "assistant", chat_session_id: chatSessionId, user_id: userId },
+    { content: question, role: "user", chat_session_id: chatSessionId, user_id: userId, created_at: now, updated_at: now },
+    { content: answer, role: "assistant", chat_session_id: chatSessionId, user_id: userId, created_at: new Date(now.getTime() + 1), updated_at: new Date(now.getTime() + 1) },
   ]);
   await ChatSession.findByIdAndUpdate(chatSessionId, { updated_at: new Date() });
 }
