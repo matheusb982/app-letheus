@@ -12,6 +12,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Plus,
   Trash2,
   MessageCircle,
@@ -20,6 +26,7 @@ import {
   Sparkles,
   ArrowUp,
   Lightbulb,
+  PanelLeftOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -108,6 +115,73 @@ function genId() {
   return `msg-${Date.now()}-${++msgCounter}`;
 }
 
+function SessionList({
+  sessions,
+  currentSessionId,
+  isPending,
+  onNewSession,
+  onDeleteSession,
+  onSelectSession,
+  chatLimit,
+  isAtLimit,
+}: {
+  sessions: SerializedChatSession[];
+  currentSessionId: string | null;
+  isPending: boolean;
+  onNewSession: () => void;
+  onDeleteSession: (id: string) => void;
+  onSelectSession: (id: string) => void;
+  chatLimit: { used: number; limit: number };
+  isAtLimit: boolean;
+}) {
+  return (
+    <>
+      <div className="p-3">
+        <Button onClick={onNewSession} disabled={isPending} className="w-full gap-2" size="sm">
+          <Plus className="h-4 w-4" />
+          Nova Conversa
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
+        {sessions.map((s) => (
+          <div
+            key={s.id}
+            className={cn(
+              "group flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm cursor-pointer transition-colors",
+              s.id === currentSessionId
+                ? "bg-primary/10 text-primary font-medium"
+                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => onSelectSession(s.id)}
+          >
+            <MessageCircle className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate flex-1">{s.title}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity"
+              onClick={(e) => { e.stopPropagation(); onDeleteSession(s.id); }}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        ))}
+        {sessions.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-8">Nenhuma conversa ainda</p>
+        )}
+      </div>
+      <div className="p-3 border-t">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Perguntas hoje</span>
+          <Badge variant={isAtLimit ? "destructive" : "secondary"} className="text-xs font-mono">
+            {chatLimit.used}/{chatLimit.limit}
+          </Badge>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function ChatClient({
   sessions,
   currentSessionId,
@@ -121,6 +195,7 @@ export function ChatClient({
     initialMessages.map((m) => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content }))
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -131,7 +206,6 @@ export function ChatClient({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Reset messages when session changes
   useEffect(() => {
     setMessages(
       initialMessages.map((m) => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content }))
@@ -141,6 +215,7 @@ export function ChatClient({
   async function handleNewSession() {
     startTransition(async () => {
       const id = await createChatSession();
+      setSheetOpen(false);
       router.push(`/chat/${id}`);
     });
   }
@@ -155,6 +230,11 @@ export function ChatClient({
         router.refresh();
       }
     });
+  }
+
+  function handleSelectSession(id: string) {
+    setSheetOpen(false);
+    router.push(`/chat/${id}`);
   }
 
   const sendMessage = useCallback(async (text: string) => {
@@ -183,10 +263,8 @@ export function ChatClient({
         throw new Error(errData?.error || `Erro ${res.status}`);
       }
 
-      // Add empty assistant message
       setMessages((prev) => [...prev, assistantMsg]);
 
-      // Stream the response
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response body");
 
@@ -206,7 +284,6 @@ export function ChatClient({
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       toast.error(err instanceof Error ? err.message : "Erro ao enviar mensagem");
-      // Remove the empty assistant message on error
       setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id));
     } finally {
       setIsLoading(false);
@@ -237,59 +314,50 @@ export function ChatClient({
     el.style.height = Math.min(el.scrollHeight, 150) + "px";
   }
 
+  const sessionListProps = {
+    sessions,
+    currentSessionId,
+    isPending,
+    onNewSession: handleNewSession,
+    onDeleteSession: handleDeleteSession,
+    onSelectSession: handleSelectSession,
+    chatLimit,
+    isAtLimit,
+  };
+
   return (
     <div className="flex h-[calc(100vh-theme(spacing.14)-theme(spacing.12))]">
-      {/* Sidebar */}
-      <div className="w-72 flex-shrink-0 border-r bg-muted/30 flex flex-col">
-        <div className="p-3">
-          <Button onClick={handleNewSession} disabled={isPending} className="w-full gap-2" size="sm">
-            <Plus className="h-4 w-4" />
-            Nova Conversa
-          </Button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
-          {sessions.map((s) => (
-            <div
-              key={s.id}
-              className={cn(
-                "group flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm cursor-pointer transition-colors",
-                s.id === currentSessionId
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
-              )}
-              onClick={() => router.push(`/chat/${s.id}`)}
-            >
-              <MessageCircle className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate flex-1">{s.title}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity"
-                onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
-              >
-                <Trash2 className="h-3 w-3" />
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex w-72 flex-shrink-0 border-r bg-muted/30 flex-col">
+        <SessionList {...sessionListProps} />
+      </div>
+
+      {/* Chat area */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Mobile header with session toggle */}
+        <div className="flex items-center gap-2 border-b px-3 py-2 md:hidden">
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <PanelLeftOpen className="h-4 w-4" />
               </Button>
-            </div>
-          ))}
-          {sessions.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-8">Nenhuma conversa ainda</p>
-          )}
-        </div>
-        <div className="p-3 border-t">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Perguntas hoje</span>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0 flex flex-col">
+              <SheetTitle className="sr-only">Conversas</SheetTitle>
+              <SessionList {...sessionListProps} />
+            </SheetContent>
+          </Sheet>
+          <span className="text-sm font-medium truncate">Assistente IA</span>
+          <div className="ml-auto">
             <Badge variant={isAtLimit ? "destructive" : "secondary"} className="text-xs font-mono">
               {chatLimit.used}/{chatLimit.limit}
             </Badge>
           </div>
         </div>
-      </div>
 
-      {/* Chat area */}
-      <div className="flex flex-1 flex-col min-w-0">
         {!currentSessionId ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="text-center space-y-6 max-w-sm">
+            <div className="text-center space-y-6 max-w-sm px-4">
               <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
                 <Sparkles className="h-8 w-8 text-primary" />
               </div>
@@ -320,7 +388,7 @@ export function ChatClient({
                         Pergunte sobre seus gastos, metas, patrimônio ou peça dicas financeiras.
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {SUGGESTIONS.map((s) => (
                         <button
                           key={s.text}
@@ -337,16 +405,16 @@ export function ChatClient({
                   </div>
                 </div>
               ) : (
-                <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+                <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
                   {messages.map((m) => (
-                    <div key={m.id} className="flex gap-3 items-start">
+                    <div key={m.id} className="flex gap-2 sm:gap-3 items-start">
                       <div
                         className={cn(
-                          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
+                          "flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center",
                           m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted border"
                         )}
                       >
-                        {m.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                        {m.role === "user" ? <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">
@@ -370,7 +438,7 @@ export function ChatClient({
             </div>
 
             {/* Input area */}
-            <div className="border-t bg-background p-4">
+            <div className="border-t bg-background p-3 sm:p-4">
               <div className="max-w-3xl mx-auto">
                 <form
                   onSubmit={handleSubmit}
@@ -387,7 +455,7 @@ export function ChatClient({
                         <Lightbulb className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent side="top" align="start" className="w-80 p-2 max-h-80 overflow-y-auto">
+                    <PopoverContent side="top" align="start" className="w-72 sm:w-80 p-2 max-h-80 overflow-y-auto">
                       {POPOVER_SUGGESTIONS.map((group) => (
                         <div key={group.label}>
                           <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
@@ -428,7 +496,7 @@ export function ChatClient({
                     <ArrowUp className="h-4 w-4" />
                   </Button>
                 </form>
-                <p className="text-center text-xs text-muted-foreground mt-2">
+                <p className="text-center text-xs text-muted-foreground mt-2 hidden sm:block">
                   Shift+Enter para nova linha
                 </p>
               </div>

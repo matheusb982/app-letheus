@@ -44,7 +44,7 @@ export function CategoryTable({ data }: CategoryTableProps) {
   return (
     <div className="space-y-6">
       {data.map((group) => (
-        <div key={group.category_name} className="rounded-lg border">
+        <div key={group.category_name} className="overflow-x-auto rounded-lg border">
           <div className="bg-muted/50 px-4 py-2">
             <h3 className="text-sm font-semibold">{group.category_name}</h3>
           </div>

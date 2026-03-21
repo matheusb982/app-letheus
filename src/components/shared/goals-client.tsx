@@ -60,7 +60,7 @@ export function GoalsClient({ goals, subcategories, periodLabel }: GoalsClientPr
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Metas</h1>
           {periodLabel && <p className="text-muted-foreground mt-1">{periodLabel}</p>}
@@ -77,7 +77,7 @@ export function GoalsClient({ goals, subcategories, periodLabel }: GoalsClientPr
         <p className="text-muted-foreground">Nenhuma meta encontrada.</p>
       ) : (
         <>
-          <div className="rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
