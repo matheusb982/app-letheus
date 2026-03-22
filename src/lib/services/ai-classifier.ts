@@ -38,10 +38,10 @@ ${descList}
 
 REGRAS IMPORTANTES (siga na ordem de prioridade):
 1. Use SEMPRE o nome da subcategoria mais específica que corresponda à despesa.
-2. Restaurantes (LTDA, ME, EIRELI com nomes de restaurantes, churrascarias, pizzarias, bistrôs) → se existir subcategoria com "Restaurante" no nome, use ela. Caso contrário, use "Refeição" ou similar.
+2. Restaurantes, churrascarias, pizzarias, bistrôs, bares, pubs, casas noturnas, baladas, cervejarias → Bares/Festas/Restaurantes.
 3. Delivery e apps de comida (iFood, Rappi, Uber Eats, Zé Delivery) → subcategoria de Delivery se existir, senão Refeição.
 4. Comércios de comida (COMERCIO DE, empório, rotisserie, marmitaria, quentinha) → Refeição, NÃO Bares/Restaurantes.
-5. Bares, baladas, casas noturnas, cervejarias artesanais → Bares/Festas/Restaurantes.
+5. Lanchonetes, fast-food, espetinhos, food trucks → Refeição.
 6. UBER, 99, taxi, Cabify → Transporte.
 7. Supermercado, mercado, atacadão, atacadista → Supermercado/Mercado.
 8. Padaria, panificadora, confeitaria → subcategoria de Padaria ou Alimentação.
