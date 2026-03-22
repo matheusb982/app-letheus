@@ -81,7 +81,7 @@ export function ImportDialog() {
           Importar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {result ? "Resultado da Importação" : "Importar Despesas"}
@@ -193,7 +193,8 @@ export function ImportDialog() {
                   <Textarea
                     id="paste-text"
                     name="text"
-                    rows={10}
+                    rows={8}
+                  className="max-h-[40vh] overflow-y-auto"
                     placeholder="Cole aqui o texto copiado do app do banco..."
                     disabled={isPending}
                   />
