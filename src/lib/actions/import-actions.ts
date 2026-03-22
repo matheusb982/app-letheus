@@ -20,7 +20,7 @@ export async function importCSVAction(formData: FormData) {
   const periodId = await getUserPeriodId();
   const file = formData.get("file") as File;
   if (!file || file.size === 0) {
-    return { success: false, created: 0, skipped: 0, total: 0, errors: ["Nenhum arquivo selecionado"] };
+    return { success: false, created: 0, skipped: 0, total: 0, items: [], errors: ["Nenhum arquivo selecionado"] };
   }
 
   const text = await file.text();
@@ -35,7 +35,7 @@ export async function importTextAction(formData: FormData) {
   const periodId = await getUserPeriodId();
   const text = formData.get("text") as string;
   if (!text?.trim()) {
-    return { success: false, created: 0, skipped: 0, total: 0, errors: ["Nenhum texto fornecido"] };
+    return { success: false, created: 0, skipped: 0, total: 0, items: [], errors: ["Nenhum texto fornecido"] };
   }
 
   const result = await importText(text, periodId);

@@ -11,13 +11,8 @@ interface ParsedRow {
   value: number;
 }
 
-interface ImportResult {
-  success: boolean;
-  created: number;
-  skipped: number;
-  total: number;
-  errors: string[];
-}
+import type { ImportedItem, ImportResult } from "./csv-import";
+export type { ImportedItem, ImportResult };
 
 const IGNORED_DESCRIPTIONS = [
   "anuidade diferenciada",
@@ -135,6 +130,7 @@ export async function importText(
   let created = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const items: ImportedItem[] = [];
 
   for (const row of validRows) {
     let description = row.csv_description;
@@ -145,13 +141,15 @@ export async function importText(
     const fingerprint = `${row.date}|${row.value}|${description}`;
     if (existingFingerprints.has(fingerprint)) {
       skipped++;
+      items.push({ description, subcategory: "", value: row.value, date: row.date, status: "skipped" });
       continue;
     }
 
+    let subcatName = "";
     try {
       const descKey = `${row.csv_category}|${row.csv_description}`;
       const subcatId = mapping.get(descKey);
-      const subcatName = subcatId
+      subcatName = subcatId
         ? subcategories.find((s) => s.id === subcatId)?.name ?? ""
         : "";
 
@@ -171,8 +169,10 @@ export async function importText(
       });
 
       created++;
+      items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "created" });
     } catch (err) {
       errors.push(`Erro: ${description} - ${(err as Error).message}`);
+      items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "error", error: (err as Error).message });
     }
   }
 
@@ -182,5 +182,6 @@ export async function importText(
     skipped,
     total: validRows.length,
     errors,
+    items,
   };
 }

@@ -14,12 +14,22 @@ interface ParsedRow {
   value: number;
 }
 
-interface ImportResult {
+export interface ImportedItem {
+  description: string;
+  subcategory: string;
+  value: number;
+  date: string;
+  status: "created" | "skipped" | "error";
+  error?: string;
+}
+
+export interface ImportResult {
   success: boolean;
   created: number;
   skipped: number;
   total: number;
   errors: string[];
+  items: ImportedItem[];
 }
 
 const IGNORED_DESCRIPTIONS = [
@@ -138,6 +148,7 @@ export async function importCSV(
   let created = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const items: ImportedItem[] = [];
 
   for (const row of validRows) {
     const fingerprint = buildFingerprint(row);
@@ -153,13 +164,15 @@ export async function importCSV(
 
     if (existingFingerprints.has(fingerprint)) {
       skipped++;
+      items.push({ description, subcategory: "", value: row.value, date: row.date, status: "skipped" });
       continue;
     }
 
+    let subcatName = "";
     try {
       const descKey = `${row.csv_category}|${row.csv_description}`;
       const subcatId = mapping.get(descKey);
-      const subcatName = subcatId
+      subcatName = subcatId
         ? subcategories.find((s) => s.id === subcatId)?.name ?? ""
         : "";
 
@@ -180,8 +193,10 @@ export async function importCSV(
       });
 
       created++;
+      items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "created" });
     } catch (err) {
       errors.push(`Erro ao criar: ${description} - ${(err as Error).message}`);
+      items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "error", error: (err as Error).message });
     }
   }
 
@@ -191,5 +206,6 @@ export async function importCSV(
     skipped,
     total: validRows.length,
     errors,
+    items,
   };
 }
