@@ -6,8 +6,9 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("pt-BR").format(d);
+  const raw = typeof date === "string" ? date : date.toISOString();
+  const d = new Date(raw.includes("T") ? raw : raw + "T12:00:00");
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo" }).format(d);
 }
 
 export function parseBRLValue(value: string): number {
