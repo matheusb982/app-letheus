@@ -28,23 +28,27 @@ export async function classifyWithAI(
     .map((d, i) => `${i}: ${d}`)
     .join("\n");
 
-  const prompt = `Você é um classificador de despesas financeiras.
+  const prompt = `Você é um classificador de despesas financeiras pessoais.
 
-Subcategorias disponíveis:
+Subcategorias disponíveis (ID: Nome):
 ${subcatList}
 
-Despesas para classificar (índice: categoria|descrição):
+Despesas para classificar (índice: categoria_csv|descrição):
 ${descList}
 
-Regras de classificação:
-- UBER, 99, taxi = Transporte
-- Supermercado, mercado, atacadão = Supermercado/Mercado
-- Padaria, panificadora = Alimentação
-- Restaurante, lanchonete, ifood, rappi = Alimentação/Delivery
-- Farmácia, drogaria = Saúde
-- Gasolina, combustível, posto = Combustível
-- Estacionamento = Estacionamento
-- Se não souber classificar, use "Outros"
+REGRAS IMPORTANTES (siga na ordem de prioridade):
+1. Use SEMPRE o nome da subcategoria mais específica que corresponda à despesa.
+2. Restaurantes (LTDA, ME, EIRELI com nomes de restaurantes, churrascarias, pizzarias, bistrôs) → se existir subcategoria com "Restaurante" no nome, use ela. Caso contrário, use "Refeição" ou similar.
+3. Delivery e apps de comida (iFood, Rappi, Uber Eats, Zé Delivery) → subcategoria de Delivery se existir, senão Refeição.
+4. Comércios de comida (COMERCIO DE, empório, rotisserie, marmitaria, quentinha) → Refeição, NÃO Bares/Restaurantes.
+5. Bares, baladas, casas noturnas, cervejarias artesanais → Bares/Festas/Restaurantes.
+6. UBER, 99, taxi, Cabify → Transporte.
+7. Supermercado, mercado, atacadão, atacadista → Supermercado/Mercado.
+8. Padaria, panificadora, confeitaria → subcategoria de Padaria ou Alimentação.
+9. Farmácia, drogaria, drogas → Saúde/Farmácia.
+10. Gasolina, combustível, posto, Shell, Ipiranga, BR → Combustível.
+11. Estacionamento, parking, estapar → Estacionamento.
+12. Se não souber classificar com certeza, use "Outros".
 
 Responda APENAS com um JSON no formato: {"0": "subcategory_id", "1": "subcategory_id", ...}
 Onde a chave é o índice da despesa e o valor é o ID da subcategoria correspondente.`;
