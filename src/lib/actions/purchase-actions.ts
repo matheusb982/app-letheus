@@ -7,6 +7,13 @@ import { User } from "@/lib/db/models/user";
 import { Purchase, type IPurchase } from "@/lib/db/models/purchase";
 import { Category } from "@/lib/db/models/category";
 import { purchaseSchema } from "@/lib/validations/purchases";
+function formatDateLocal(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 
 export interface SerializedPurchase {
   id: string;
@@ -39,7 +46,7 @@ export async function getPurchases(subcategoryId?: string): Promise<SerializedPu
   return purchases.map((p) => ({
     id: p._id.toString(),
     value: p.value,
-    purchase_date: p.purchase_date.toISOString().split("T")[0],
+    purchase_date: formatDateLocal(p.purchase_date),
     purchase_type: p.purchase_type,
     description: p.description ?? "",
     subcategory_name: p.subcategory_name ?? "",
@@ -55,7 +62,7 @@ export async function getPurchaseById(id: string): Promise<SerializedPurchase | 
   return {
     id: p._id.toString(),
     value: p.value,
-    purchase_date: p.purchase_date.toISOString().split("T")[0],
+    purchase_date: formatDateLocal(p.purchase_date),
     purchase_type: p.purchase_type,
     description: p.description ?? "",
     subcategory_name: p.subcategory_name ?? "",
@@ -93,7 +100,7 @@ export async function createPurchase(data: FormData) {
 
   await Purchase.create({
     value: parsed.data.value,
-    purchase_date: new Date(parsed.data.purchase_date),
+    purchase_date: new Date(parsed.data.purchase_date + "T12:00:00"),
     purchase_type: parsed.data.purchase_type,
     description: parsed.data.description ?? "",
     subcategory_id: parsed.data.subcategory_id || undefined,
@@ -128,7 +135,7 @@ export async function updatePurchase(id: string, data: FormData) {
 
   await Purchase.findByIdAndUpdate(id, {
     value: parsed.data.value,
-    purchase_date: new Date(parsed.data.purchase_date),
+    purchase_date: new Date(parsed.data.purchase_date + "T12:00:00"),
     purchase_type: parsed.data.purchase_type,
     description: parsed.data.description ?? "",
     subcategory_id: parsed.data.subcategory_id || undefined,

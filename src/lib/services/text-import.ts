@@ -156,7 +156,7 @@ export async function importText(
       const parts = row.date.split("/");
       let year = parseInt(parts[2]);
       if (year < 100) year += 2000;
-      const dateObj = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]));
+      const dateObj = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
 
       await Purchase.create({
         value: row.value,
