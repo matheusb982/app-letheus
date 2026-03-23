@@ -87,7 +87,8 @@ function parseTextLines(text: string): ParsedRow[] {
 
 export async function importText(
   text: string,
-  periodId: string
+  periodId: string,
+  userId?: string
 ): Promise<ImportResult> {
   await connectDB();
 
@@ -111,7 +112,7 @@ export async function importText(
 
   // AI classification
   const uniqueDescriptions = [...new Set(validRows.map((r) => `${r.csv_category}|${r.csv_description}`))];
-  const mapping = await classifyWithAI(uniqueDescriptions, subcategories);
+  const mapping = await classifyWithAI(uniqueDescriptions, subcategories, userId, periodId);
 
   // Existing fingerprints for dedup
   const existingPurchases = await Purchase.find({

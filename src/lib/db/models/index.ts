@@ -8,3 +8,4 @@ export { Category, type ICategory, type ISubcategory } from "./category";
 export { ChatSession, type IChatSession } from "./chat-session";
 export { ChatMessage, type IChatMessage } from "./chat-message";
 export { CachedResponse, type ICachedResponse } from "./cached-response";
+export { ClassificationRule, type IClassificationRule } from "./classification-rule";

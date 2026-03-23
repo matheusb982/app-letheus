@@ -106,7 +106,8 @@ function buildFingerprint(row: ParsedRow): string {
 export async function importCSV(
   csvText: string,
   periodId: string,
-  purchaseType: "debit" | "credit" = "credit"
+  purchaseType: "debit" | "credit" = "credit",
+  userId?: string
 ): Promise<ImportResult> {
   await connectDB();
 
@@ -129,7 +130,7 @@ export async function importCSV(
 
   // AI classification
   const uniqueDescriptions = [...new Set(validRows.map((r) => `${r.csv_category}|${r.csv_description}`))];
-  const mapping = await classifyWithAI(uniqueDescriptions, subcategories);
+  const mapping = await classifyWithAI(uniqueDescriptions, subcategories, userId, periodId);
 
   // Load existing fingerprints for dedup
   const existingPurchases = await Purchase.find({

@@ -1,5 +1,6 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
+import { matchRules, getFewShotExamples } from "./classification-rules";
 
 interface SubcategoryOption {
   id: string;
@@ -8,7 +9,9 @@ interface SubcategoryOption {
 
 export async function classifyWithAI(
   descriptions: string[],
-  subcategories: SubcategoryOption[]
+  subcategories: SubcategoryOption[],
+  userId?: string,
+  periodId?: string
 ): Promise<Map<string, string>> {
   const mapping = new Map<string, string>();
 
@@ -20,11 +23,43 @@ export async function classifyWithAI(
     s.name.toLowerCase().includes("outros")
   )?.id;
 
+  // Step 1: Tentar match por regras manuais
+  let remaining = [...descriptions];
+
+  if (userId) {
+    const ruleMatches = await matchRules(descriptions, userId);
+    for (const [desc, match] of ruleMatches) {
+      // Verificar se a subcategoria da regra ainda existe
+      const valid = subcategories.find((s) => s.id === match.subcategoryId);
+      if (valid) {
+        mapping.set(desc, match.subcategoryId);
+        remaining = remaining.filter((d) => d !== desc);
+      }
+    }
+  }
+
+  // Se todas foram classificadas por regras, retorna
+  if (remaining.length === 0) {
+    return mapping;
+  }
+
+  // Step 2: Buscar exemplos few-shot do histórico
+  let fewShotBlock = "";
+  if (userId && periodId) {
+    const examples = await getFewShotExamples(userId, periodId);
+    if (examples.length > 0) {
+      fewShotBlock = `\nExemplos de classificações anteriores deste usuário (use como referência):
+${examples.map((e) => `- "${e.description}" → ${e.subcategory_name}`).join("\n")}
+`;
+    }
+  }
+
+  // Step 3: Classificar o restante com IA
   const subcatList = subcategories
     .map((s) => `${s.id}: ${s.name}`)
     .join("\n");
 
-  const descList = descriptions
+  const descList = remaining
     .map((d, i) => `${i}: ${d}`)
     .join("\n");
 
@@ -32,7 +67,7 @@ export async function classifyWithAI(
 
 Subcategorias disponíveis (ID: Nome):
 ${subcatList}
-
+${fewShotBlock}
 Despesas para classificar (índice: categoria_csv|descrição):
 ${descList}
 
@@ -48,7 +83,8 @@ REGRAS IMPORTANTES (siga na ordem de prioridade):
 9. Farmácia, drogaria, drogas → Saúde/Farmácia.
 10. Gasolina, combustível, posto, Shell, Ipiranga, BR → Combustível.
 11. Estacionamento, parking, estapar → Estacionamento.
-12. Se não souber classificar com certeza, use "Outros".
+12. Se já existir um exemplo anterior idêntico ou muito similar, use a MESMA subcategoria.
+13. Se não souber classificar com certeza, use "Outros".
 
 Responda APENAS com um JSON no formato: {"0": "subcategory_id", "1": "subcategory_id", ...}
 Onde a chave é o índice da despesa e o valor é o ID da subcategoria correspondente.`;
@@ -64,24 +100,23 @@ Onde a chave é o índice da despesa e o valor é o ID da subcategoria correspon
       maxOutputTokens: 4096,
     });
 
-    // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return applyFallback(descriptions, mapping, fallbackId);
+      return applyFallback(remaining, mapping, fallbackId);
     }
 
     const parsed = JSON.parse(jsonMatch[0]) as Record<string, string>;
 
     for (const [indexStr, subcatId] of Object.entries(parsed)) {
       const index = parseInt(indexStr);
-      if (index >= 0 && index < descriptions.length) {
-        mapping.set(descriptions[index], subcatId);
+      if (index >= 0 && index < remaining.length) {
+        mapping.set(remaining[index], subcatId);
       }
     }
 
     return mapping;
   } catch {
-    return applyFallback(descriptions, mapping, fallbackId);
+    return applyFallback(remaining, mapping, fallbackId);
   }
 }
 
@@ -92,7 +127,9 @@ function applyFallback(
 ): Map<string, string> {
   if (fallbackId) {
     for (const desc of descriptions) {
-      mapping.set(desc, fallbackId);
+      if (!mapping.has(desc)) {
+        mapping.set(desc, fallbackId);
+      }
     }
   }
   return mapping;

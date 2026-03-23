@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { User } from "@/lib/db/models/user";
 import { Purchase, type IPurchase } from "@/lib/db/models/purchase";
 import { Category } from "@/lib/db/models/category";
+import { saveClassificationRule } from "@/lib/services/classification-rules";
 import { purchaseSchema } from "@/lib/validations/purchases";
 function formatDateBR(date: Date): string {
   const parts = new Intl.DateTimeFormat('pt-BR', {
@@ -139,6 +140,8 @@ export async function updatePurchase(id: string, data: FormData) {
     ? await getSubcategoryName(parsed.data.subcategory_id)
     : "";
 
+  const oldPurchase = await Purchase.findById(id).lean<IPurchase>();
+  
   await Purchase.findByIdAndUpdate(id, {
     value: parsed.data.value,
     purchase_date: new Date(parsed.data.purchase_date + "T12:00:00"),
@@ -147,6 +150,22 @@ export async function updatePurchase(id: string, data: FormData) {
     subcategory_id: parsed.data.subcategory_id || undefined,
     subcategory_name: subcategoryName,
   });
+
+  // Se a subcategoria mudou, salvar regra de classificação
+  if (
+    parsed.data.subcategory_id &&
+    oldPurchase?.subcategory_id?.toString() !== parsed.data.subcategory_id
+  ) {
+    const session = await auth();
+    if (session?.user?.id && parsed.data.description) {
+      await saveClassificationRule(
+        parsed.data.description,
+        parsed.data.subcategory_id,
+        subcategoryName,
+        session.user.id
+      );
+    }
+  }
 
   revalidatePath("/purchases");
   revalidatePath("/dashboard");

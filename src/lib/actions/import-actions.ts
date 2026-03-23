@@ -7,24 +7,24 @@ import { importCSV } from "@/lib/services/csv-import";
 import { importText } from "@/lib/services/text-import";
 import { revalidatePath } from "next/cache";
 
-async function getUserPeriodId(): Promise<string> {
+async function getUserContext(): Promise<{ periodId: string; userId: string }> {
   const session = await auth();
   if (!session) throw new Error("Não autorizado");
   await connectDB();
   const user = await User.findById(session.user.id);
   if (!user?.period_id) throw new Error("Nenhum período selecionado");
-  return user.period_id.toString();
+  return { periodId: user.period_id.toString(), userId: session.user.id! };
 }
 
 export async function importCSVAction(formData: FormData) {
-  const periodId = await getUserPeriodId();
+  const { periodId, userId } = await getUserContext();
   const file = formData.get("file") as File;
   if (!file || file.size === 0) {
     return { success: false, created: 0, skipped: 0, total: 0, items: [], errors: ["Nenhum arquivo selecionado"] };
   }
 
   const text = await file.text();
-  const result = await importCSV(text, periodId);
+  const result = await importCSV(text, periodId, "credit", userId);
 
   revalidatePath("/purchases");
   revalidatePath("/dashboard");
@@ -32,13 +32,13 @@ export async function importCSVAction(formData: FormData) {
 }
 
 export async function importTextAction(formData: FormData) {
-  const periodId = await getUserPeriodId();
+  const { periodId, userId } = await getUserContext();
   const text = formData.get("text") as string;
   if (!text?.trim()) {
     return { success: false, created: 0, skipped: 0, total: 0, items: [], errors: ["Nenhum texto fornecido"] };
   }
 
-  const result = await importText(text, periodId);
+  const result = await importText(text, periodId, userId);
 
   revalidatePath("/purchases");
   revalidatePath("/dashboard");
