@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/shared/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -52,11 +53,9 @@ export function PurchaseForm({ purchase, subcategories, action, onSuccess }: Pur
 
       <div className="space-y-2">
         <Label htmlFor="value">Valor</Label>
-        <Input
+        <CurrencyInput
           id="value"
           name="value"
-          type="number"
-          step="0.01"
           defaultValue={purchase?.value}
           required
         />
