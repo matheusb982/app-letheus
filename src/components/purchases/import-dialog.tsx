@@ -152,13 +152,23 @@ export function ImportDialog() {
             </div>
 
             
-            {goalAlerts.length > 0 && (
+            {goalAlerts.length > 0 && (() => {
+              const importedSubcategories = new Set(
+                result.items
+                  .filter((item) => item.status === "created" && item.subcategory)
+                  .map((item) => item.subcategory)
+              );
+              const affectedAlerts = goalAlerts.filter((a) =>
+                importedSubcategories.has(a.subcategoryName)
+              );
+              if (affectedAlerts.length === 0) return null;
+              return (
               <div className="space-y-2">
                 <p className="text-sm font-semibold flex items-center gap-1.5">
                   <AlertCircle className="h-4 w-4 text-amber-500" />
                   Metas afetadas
                 </p>
-                {goalAlerts.map((alert) => {
+                {affectedAlerts.map((alert) => {
                   const pct = Math.min(alert.percentage, 100);
                   const color =
                     alert.level === "exceeded"
@@ -193,7 +203,8 @@ export function ImportDialog() {
                   );
                 })}
               </div>
-            )}
+              );
+            })()}
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => { setResult(null); setGoalAlerts([]); }}>
