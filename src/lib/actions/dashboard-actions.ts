@@ -21,6 +21,52 @@ export interface DashboardKPIs {
   performanceValue: number;
 }
 
+export interface GoalAlert {
+  subcategoryName: string;
+  goalValue: number;
+  spent: number;
+  percentage: number;
+  diff: number;
+  level: "ok" | "warning" | "danger" | "exceeded";
+}
+
+function calculateGoalAlerts(
+  goals: IGoal[],
+  purchases: IPurchase[]
+): GoalAlert[] {
+  const spentBySubcat = new Map<string, number>();
+  for (const p of purchases) {
+    const key = p.subcategory_id?.toString();
+    if (key) {
+      spentBySubcat.set(key, (spentBySubcat.get(key) ?? 0) + p.value);
+    }
+  }
+
+  return goals
+    .map((g) => {
+      const subcatId = g.subcategory_id?.toString() ?? "";
+      const spent = spentBySubcat.get(subcatId) ?? 0;
+      const percentage = g.value > 0 ? (spent / g.value) * 100 : 0;
+      const diff = spent - g.value;
+
+      let level: GoalAlert["level"] = "ok";
+      if (percentage >= 100) level = "exceeded";
+      else if (percentage >= 90) level = "danger";
+      else if (percentage >= 70) level = "warning";
+
+      return {
+        subcategoryName: g.subcategory_name ?? "",
+        goalValue: g.value,
+        spent,
+        percentage,
+        diff,
+        level,
+      };
+    })
+    .filter((a) => a.level !== "ok")
+    .sort((a, b) => b.percentage - a.percentage);
+}
+
 export async function getDashboardData() {
   const session = await auth();
   if (!session) throw new Error("Não autorizado");
@@ -77,5 +123,23 @@ export async function getDashboardData() {
 
   const paymentsPerCategory = await getPaymentsPerCategory(purchases, goals);
 
-  return { kpis, paymentsPerCategory };
+  const goalAlerts = calculateGoalAlerts(goals, purchases);
+
+  return { kpis, paymentsPerCategory, goalAlerts };
+}
+
+export async function getGoalAlerts(): Promise<GoalAlert[]> {
+  const session = await auth();
+  if (!session) return [];
+
+  await connectDB();
+  const user = await User.findById(session.user.id);
+  if (!user?.period_id) return [];
+
+  const [purchases, goals] = await Promise.all([
+    Purchase.find({ period_id: user.period_id }).lean<IPurchase[]>(),
+    Goal.find({ period_id: user.period_id }).lean<IGoal[]>(),
+  ]);
+
+  return calculateGoalAlerts(goals, purchases);
 }

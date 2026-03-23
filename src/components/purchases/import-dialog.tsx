@@ -16,7 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Loader2, ArrowLeft, CheckCircle2, SkipForward, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 import { importCSVAction, importTextAction } from "@/lib/actions/import-actions";
+import { getGoalAlerts, type GoalAlert } from "@/lib/actions/dashboard-actions";
 import type { ImportedItem } from "@/lib/services/csv-import";
 
 interface ImportResultData {
@@ -31,6 +34,7 @@ export function ImportDialog() {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<ImportResultData | null>(null);
+  const [goalAlerts, setGoalAlerts] = useState<GoalAlert[]>([]);
 
   function handleCSVSubmit(formData: FormData) {
     startTransition(async () => {
@@ -38,6 +42,8 @@ export function ImportDialog() {
       setResult(res);
       if (res.created > 0) {
         toast.success(`${res.created} despesas importadas!`);
+        const alerts = await getGoalAlerts();
+        setGoalAlerts(alerts);
       }
     });
   }
@@ -48,13 +54,15 @@ export function ImportDialog() {
       setResult(res);
       if (res.created > 0) {
         toast.success(`${res.created} despesas importadas!`);
+        const alerts = await getGoalAlerts();
+        setGoalAlerts(alerts);
       }
     });
   }
 
   function handleClose(isOpen: boolean) {
     setOpen(isOpen);
-    if (!isOpen) setResult(null);
+    if (!isOpen) { setResult(null); setGoalAlerts([]); }
   }
 
   function formatBRL(value: number) {
@@ -143,8 +151,52 @@ export function ImportDialog() {
               </table>
             </div>
 
+            
+            {goalAlerts.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold flex items-center gap-1.5">
+                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                  Metas afetadas
+                </p>
+                {goalAlerts.map((alert) => {
+                  const pct = Math.min(alert.percentage, 100);
+                  const color =
+                    alert.level === "exceeded"
+                      ? "text-red-600"
+                      : alert.level === "danger"
+                      ? "text-orange-600"
+                      : "text-amber-600";
+                  const progressColor =
+                    alert.level === "exceeded"
+                      ? "[&>div]:bg-red-500"
+                      : alert.level === "danger"
+                      ? "[&>div]:bg-orange-500"
+                      : "[&>div]:bg-amber-500";
+                  return (
+                    <div key={alert.subcategoryName} className="rounded border p-2 text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className={cn("font-medium", color)}>
+                          {alert.level === "exceeded" ? "Estourou" : alert.level === "danger" ? "Cuidado" : "Atenção"}:{" "}
+                          {alert.subcategoryName}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {alert.spent.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} / {alert.goalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </span>
+                      </div>
+                      <Progress value={pct} className={cn("h-1.5", progressColor)} />
+                      <p className={cn("text-right", color)}>
+                        {alert.level === "exceeded"
+                          ? `Passou ${alert.diff.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+                          : `${alert.percentage.toFixed(0)}% da meta`}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setResult(null)}>
+              <Button variant="outline" onClick={() => { setResult(null); setGoalAlerts([]); }}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Nova importação
               </Button>

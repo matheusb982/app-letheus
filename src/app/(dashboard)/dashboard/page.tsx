@@ -2,6 +2,7 @@ import { getCurrentPeriod } from "@/lib/actions/period-actions";
 import { getDashboardData } from "@/lib/actions/dashboard-actions";
 import { KPICards } from "@/components/dashboard/kpi-cards";
 import { CategoryTable } from "@/components/dashboard/category-table";
+import { GoalAlerts } from "@/components/dashboard/goal-alerts";
 
 export default async function DashboardPage() {
   const period = await getCurrentPeriod();
@@ -19,6 +20,9 @@ export default async function DashboardPage() {
       {data ? (
         <>
           <KPICards kpis={data.kpis} />
+          {data.goalAlerts.length > 0 && (
+            <GoalAlerts alerts={data.goalAlerts} />
+          )}
           <div>
             <h2 className="mb-4 text-lg font-semibold">Despesas por Categoria</h2>
             <CategoryTable data={data.paymentsPerCategory} />
