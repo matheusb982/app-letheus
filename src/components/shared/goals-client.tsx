@@ -28,6 +28,7 @@ import {
 import type { SerializedSubcategory } from "@/lib/actions/category-actions";
 import { formatCurrency } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
+import { ReviewGoalsDialog } from "@/components/goals/review-goals-dialog";
 
 interface GoalsClientProps {
   goals: SerializedGoal[];
@@ -65,10 +66,13 @@ export function GoalsClient({ goals, subcategories, periodLabel }: GoalsClientPr
           <h1 className="text-2xl font-bold">Metas</h1>
           {periodLabel && <p className="text-muted-foreground mt-1">{periodLabel}</p>}
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Meta
-        </Button>
+        <div className="flex gap-2">
+          <ReviewGoalsDialog />
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Meta
+          </Button>
+        </div>
       </div>
 
       {!periodLabel ? (
