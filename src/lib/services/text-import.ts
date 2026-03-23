@@ -21,9 +21,23 @@ const IGNORED_DESCRIPTIONS = [
   "pagamentos validos",
 ];
 
-const DATE_REGEX = /^(?:segunda|terça|quarta|quinta|sexta|sábado|domingo)[\w-]*,?\s*(\d{2}\/\d{2}\/\d{2,4})/i;
+// Aceita vários formatos de data:
+// "segunda-feira, 23/03/2026" | "Hoje, 23/03/26" | "Ontem, 22/03/26" | "23/03/2026" | "23/03/26"
+const DATE_PATTERNS = [
+  /^(?:segunda|terça|quarta|quinta|sexta|sábado|domingo)[\w-]*,?\s*(\d{2}\/\d{2}\/\d{2,4})/i,
+  /^(?:hoje|ontem),?\s*(\d{2}\/\d{2}\/\d{2,4})/i,
+  /^(\d{2}\/\d{2}\/\d{2,4})$/,
+];
 const VALUE_REGEX = /^-?\s*R\$\s*([\d.,]+)$/;
 const INSTALLMENT_REGEX = /^Em\s+(\d+)x$/i;
+
+function matchDate(line: string): string | null {
+  for (const pattern of DATE_PATTERNS) {
+    const match = line.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
 
 function parseTextLines(text: string): ParsedRow[] {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -33,19 +47,27 @@ function parseTextLines(text: string): ParsedRow[] {
   let currentCategory = "";
   let currentDescription = "";
   let expectingDescription = false;
+  let lastWasValue = false;
 
   for (const line of lines) {
     // Date line
-    const dateMatch = line.match(DATE_REGEX);
-    if (dateMatch) {
-      currentDate = dateMatch[1];
+    const dateStr = matchDate(line);
+    if (dateStr) {
+      currentDate = dateStr;
       expectingDescription = false;
+      lastWasValue = false;
       continue;
     }
 
     // Value line
     const valueMatch = line.match(VALUE_REGEX);
     if (valueMatch && currentDate) {
+      // Skip duplicate value line (apps show value twice)
+      if (lastWasValue) {
+        lastWasValue = false;
+        continue;
+      }
+
       const rawValue = valueMatch[1].replace(/\./g, "").replace(",", ".");
       const value = parseFloat(rawValue);
 
@@ -60,8 +82,11 @@ function parseTextLines(text: string): ParsedRow[] {
       currentCategory = "";
       currentDescription = "";
       expectingDescription = false;
+      lastWasValue = true;
       continue;
     }
+
+    lastWasValue = false;
 
     // Installment line
     const installMatch = line.match(INSTALLMENT_REGEX);
