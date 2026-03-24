@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db/connection";
 import { Category, type ICategory } from "@/lib/db/models/category";
 
@@ -27,7 +28,8 @@ interface GoalDoc {
 
 export async function getPaymentsPerCategory(
   purchases: PurchaseDoc[],
-  goals: GoalDoc[]
+  goals: GoalDoc[],
+  familyId?: mongoose.Types.ObjectId | string
 ): Promise<CategoryGroup[]> {
   await connectDB();
 
@@ -46,7 +48,7 @@ export async function getPaymentsPerCategory(
   }
 
   // Get all purchase categories with subcategories
-  const categories = await Category.find({ category_type: "purchase" }).lean<ICategory[]>();
+  const categories = await Category.find({ category_type: "purchase", ...(familyId ? { family_id: familyId } : {}) }).lean<ICategory[]>();
 
   const result: CategoryGroup[] = [];
 

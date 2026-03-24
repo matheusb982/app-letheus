@@ -107,7 +107,8 @@ export async function importCSV(
   csvText: string,
   periodId: string,
   purchaseType: "debit" | "credit" = "credit",
-  userId?: string
+  userId?: string,
+  familyId?: string
 ): Promise<ImportResult> {
   await connectDB();
 
@@ -120,7 +121,7 @@ export async function importCSV(
   const validRows = rows.filter((row) => row.value > 0 && !isIgnored(row.csv_description));
 
   // Load subcategories
-  const categories = await Category.find({ category_type: "purchase" }).lean<ICategory[]>();
+  const categories = await Category.find({ category_type: "purchase", ...(familyId ? { family_id: familyId } : {}) }).lean<ICategory[]>();
   const subcategories = categories.flatMap((c) =>
     c.subcategories.map((s) => ({
       id: s._id.toString(),
@@ -136,6 +137,7 @@ export async function importCSV(
   const existingPurchases = await Purchase.find({
     period_id: periodId,
     purchase_type: detectedType,
+    ...(familyId ? { family_id: familyId } : {}),
   }).lean();
 
   const existingFingerprints = new Set(
@@ -191,6 +193,7 @@ export async function importCSV(
         subcategory_id: subcatId || undefined,
         subcategory_name: subcatName,
         period_id: periodId,
+        ...(familyId ? { family_id: familyId } : {}),
       });
 
       created++;

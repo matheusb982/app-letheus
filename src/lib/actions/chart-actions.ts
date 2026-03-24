@@ -5,6 +5,7 @@ import { Period, type IPeriod } from "@/lib/db/models/period";
 import { Purchase, type IPurchase } from "@/lib/db/models/purchase";
 import { Goal, type IGoal } from "@/lib/db/models/goal";
 import { Patrimony, type IPatrimony } from "@/lib/db/models/patrimony";
+import { getUserFamilyId } from "@/lib/actions/family-helpers";
 
 export interface ChartDataPoint {
   label: string;
@@ -21,6 +22,7 @@ export async function getAnnualPurchaseChartData(
   subcategoryId?: string
 ): Promise<ChartDataPoint[]> {
   await connectDB();
+  const familyId = await getUserFamilyId();
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -28,6 +30,7 @@ export async function getAnnualPurchaseChartData(
 
   // Get up to 12 periods going backward from current month
   const periods = await Period.find({
+    family_id: familyId,
     $or: [
       { year: currentYear },
       { year: currentYear - 1, month: { $gt: currentMonth } },
@@ -41,8 +44,8 @@ export async function getAnnualPurchaseChartData(
   const result: ChartDataPoint[] = [];
 
   for (const period of last12) {
-    const purchaseQuery: Record<string, unknown> = { period_id: period._id };
-    const goalQuery: Record<string, unknown> = { period_id: period._id };
+    const purchaseQuery: Record<string, unknown> = { period_id: period._id, family_id: familyId };
+    const goalQuery: Record<string, unknown> = { period_id: period._id, family_id: familyId };
 
     if (subcategoryId) {
       purchaseQuery.subcategory_id = subcategoryId;
@@ -66,12 +69,14 @@ export async function getAnnualPurchaseChartData(
 
 export async function getAnnualPatrimonyChartData(): Promise<PatrimonyChartData> {
   await connectDB();
+  const familyId = await getUserFamilyId();
 
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
   const periods = await Period.find({
+    family_id: familyId,
     $or: [
       { year: currentYear },
       { year: currentYear - 1, month: { $gt: currentMonth } },
@@ -86,7 +91,7 @@ export async function getAnnualPatrimonyChartData(): Promise<PatrimonyChartData>
   const labels: string[] = [];
 
   for (const period of last12) {
-    const patrimonies = await Patrimony.find({ period_id: period._id }).lean<IPatrimony[]>();
+    const patrimonies = await Patrimony.find({ period_id: period._id, family_id: familyId }).lean<IPatrimony[]>();
     const total = patrimonies.reduce((sum, p) => sum + p.value, 0);
     totalPatrimonies.push(total);
     labels.push(`${period.month}/${period.year}`);

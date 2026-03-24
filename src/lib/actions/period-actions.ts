@@ -9,6 +9,7 @@ import { Goal } from "@/lib/db/models/goal";
 import { Revenue } from "@/lib/db/models/revenue";
 import { getMonthName } from "@/lib/utils/months";
 import { DEFAULT_REVENUES } from "@/lib/utils/constants";
+import { getUserFamilyId } from "@/lib/actions/family-helpers";
 
 export async function setPeriod(periodId: string) {
   const session = await auth();
@@ -25,6 +26,7 @@ export async function createNewPeriod() {
   if (!session) throw new Error("Não autorizado");
 
   await connectDB();
+  const familyId = await getUserFamilyId();
   const user = await User.findById(session.user.id);
   if (!user) throw new Error("Usuário não encontrado");
 
@@ -46,24 +48,26 @@ export async function createNewPeriod() {
   }
 
   // Check if period already exists
-  let newPeriod = await Period.findOne({ month: nextMonth, year: nextYear });
+  let newPeriod = await Period.findOne({ month: nextMonth, year: nextYear, family_id: familyId });
 
   if (!newPeriod) {
     newPeriod = await Period.create({
       name: getMonthName(nextMonth),
       month: nextMonth,
       year: nextYear,
+      family_id: familyId,
     });
 
     // Copy goals from current period
     if (currentPeriod) {
-      const currentGoals = await Goal.find({ period_id: currentPeriod._id });
+      const currentGoals = await Goal.find({ period_id: currentPeriod._id, family_id: familyId });
       for (const goal of currentGoals) {
         await Goal.create({
           value: goal.value,
           subcategory_name: goal.subcategory_name,
           subcategory_id: goal.subcategory_id,
           period_id: newPeriod._id,
+          family_id: familyId,
         });
       }
     }
@@ -74,6 +78,7 @@ export async function createNewPeriod() {
         name: rev.name,
         value: rev.value,
         period_id: newPeriod._id,
+        family_id: familyId,
       });
     }
   }
@@ -106,7 +111,8 @@ function serializePeriod(p: IPeriod): SerializedPeriod {
 
 export async function getAllPeriods(): Promise<SerializedPeriod[]> {
   await connectDB();
-  const periods = await Period.find().sort({ year: -1, month: -1 });
+  const familyId = await getUserFamilyId();
+  const periods = await Period.find({ family_id: familyId }).sort({ year: -1, month: -1 });
   return periods.map(serializePeriod);
 }
 

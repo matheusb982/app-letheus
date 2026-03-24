@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db/connection";
 import { auth } from "@/lib/auth";
-import { User } from "@/lib/db/models/user";
 import { Purchase, type IPurchase } from "@/lib/db/models/purchase";
 import { Category } from "@/lib/db/models/category";
 import { saveClassificationRule } from "@/lib/services/classification-rules";
 import { purchaseSchema } from "@/lib/validations/purchases";
+import { getUserFamilyContext } from "@/lib/actions/family-helpers";
 function formatDateBR(date: Date): string {
   const parts = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -33,19 +33,10 @@ export interface SerializedPurchase {
   period_id: string;
 }
 
-async function getUserPeriodId() {
-  const session = await auth();
-  if (!session) throw new Error("Não autorizado");
-  await connectDB();
-  const user = await User.findById(session.user.id);
-  if (!user?.period_id) throw new Error("Nenhum período selecionado");
-  return user.period_id;
-}
-
 export async function getPurchases(subcategoryId?: string): Promise<SerializedPurchase[]> {
-  const periodId = await getUserPeriodId();
+  const { familyId, periodId } = await getUserFamilyContext();
 
-  const query: Record<string, unknown> = { period_id: periodId };
+  const query: Record<string, unknown> = { period_id: periodId, family_id: familyId };
   if (subcategoryId) query.subcategory_id = subcategoryId;
 
   const purchases = await Purchase.find(query).sort({ purchase_date: -1 }).lean<IPurchase[]>();
@@ -86,7 +77,7 @@ async function getSubcategoryName(subcategoryId: string): Promise<string> {
 }
 
 export async function createPurchase(data: FormData) {
-  const periodId = await getUserPeriodId();
+  const { familyId, periodId } = await getUserFamilyContext();
 
   const raw = {
     value: data.get("value"),
@@ -113,6 +104,7 @@ export async function createPurchase(data: FormData) {
     subcategory_id: parsed.data.subcategory_id || undefined,
     subcategory_name: subcategoryName,
     period_id: periodId,
+    family_id: familyId,
   });
 
   revalidatePath("/purchases");

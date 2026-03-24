@@ -45,49 +45,7 @@ export async function loginAction(
 
 export async function registerAction(
   _prevState: ActionState,
-  formData: FormData
+  _formData: FormData
 ): Promise<ActionState> {
-  const raw = {
-    fullname: formData.get("fullname") as string,
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-    confirmPassword: formData.get("confirmPassword") as string,
-  };
-
-  const parsed = registerSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { error: parsed.error.errors[0].message };
-  }
-
-  await connectDB();
-
-  const existing = await User.findOne({
-    email: parsed.data.email.toLowerCase(),
-  });
-  if (existing) {
-    return { error: "Este email já está cadastrado" };
-  }
-
-  const encrypted_password = await bcrypt.hash(parsed.data.password, 12);
-
-  await User.create({
-    fullname: parsed.data.fullname,
-    email: parsed.data.email.toLowerCase(),
-    encrypted_password,
-  });
-
-  try {
-    await signIn("credentials", {
-      email: parsed.data.email,
-      password: parsed.data.password,
-      redirect: false,
-    });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return { error: "Conta criada, mas falha ao fazer login automático. Tente fazer login." };
-    }
-    throw error;
-  }
-
-  redirect("/dashboard");
+  return { error: "O cadastro está desabilitado. Solicite ao administrador para criar sua conta." };
 }

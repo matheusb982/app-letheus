@@ -13,6 +13,7 @@ import {
   FolderTree,
   MessageCircle,
   Shield,
+  Users,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { isAdmin as checkIsAdmin } from "@/lib/actions/admin-actions";
@@ -67,18 +68,30 @@ export function Sidebar() {
       {admin && (
         <>
           <Separator />
-          <nav className="px-3 py-3">
+          <nav className="space-y-1 px-3 py-3">
             <Link
               href="/admin/users"
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                pathname.startsWith("/admin")
+                pathname.startsWith("/admin/users")
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
               )}
             >
               <Shield className="h-4 w-4" />
-              Admin
+              Usuários
+            </Link>
+            <Link
+              href="/admin/families"
+              className={cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                pathname.startsWith("/admin/families")
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Users className="h-4 w-4" />
+              Famílias
             </Link>
           </nav>
         </>

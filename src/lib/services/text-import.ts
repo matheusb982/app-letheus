@@ -113,7 +113,8 @@ function parseTextLines(text: string): ParsedRow[] {
 export async function importText(
   text: string,
   periodId: string,
-  userId?: string
+  userId?: string,
+  familyId?: string
 ): Promise<ImportResult> {
   await connectDB();
 
@@ -127,7 +128,7 @@ export async function importText(
   );
 
   // Load subcategories
-  const categories = await Category.find({ category_type: "purchase" }).lean<ICategory[]>();
+  const categories = await Category.find({ category_type: "purchase", ...(familyId ? { family_id: familyId } : {}) }).lean<ICategory[]>();
   const subcategories = categories.flatMap((c) =>
     c.subcategories.map((s) => ({
       id: s._id.toString(),
@@ -143,6 +144,7 @@ export async function importText(
   const existingPurchases = await Purchase.find({
     period_id: periodId,
     purchase_type: "credit",
+    ...(familyId ? { family_id: familyId } : {}),
   }).lean();
 
   const existingFingerprints = new Set(
@@ -192,6 +194,7 @@ export async function importText(
         subcategory_id: subcatId || undefined,
         subcategory_name: subcatName,
         period_id: periodId,
+        ...(familyId ? { family_id: familyId } : {}),
       });
 
       created++;

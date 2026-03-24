@@ -35,6 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.fullname,
           periodId: user.period_id?.toString() ?? null,
+          familyId: user.family_id?.toString() ?? null,
         };
       },
     }),
@@ -45,6 +46,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.userId = user.id;
         token.periodId = (user as Record<string, unknown>).periodId as string | null;
+        token.familyId = (user as Record<string, unknown>).familyId as string | null;
       }
       // Allow updating periodId from client via update()
       if (trigger === "update" && session?.periodId) {
@@ -56,6 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.userId as string;
         session.user.periodId = token.periodId as string | null;
+        session.user.familyId = token.familyId as string | null;
       }
       return session;
     },
@@ -72,6 +75,7 @@ declare module "next-auth" {
       email: string;
       name: string;
       periodId: string | null;
+      familyId: string | null;
     };
   }
 }

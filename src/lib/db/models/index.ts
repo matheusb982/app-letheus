@@ -1,3 +1,4 @@
+export { Family, type IFamily } from "./family";
 export { User, type IUser } from "./user";
 export { Period, type IPeriod } from "./period";
 export { Purchase, type IPurchase } from "./purchase";
