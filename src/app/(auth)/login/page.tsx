@@ -23,8 +23,8 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Letheus</CardTitle>
-        <CardDescription>Faça login para acessar sua conta</CardDescription>
+        <CardTitle className="text-2xl">Letheus IA Financeira</CardTitle>
+        <CardDescription>Seu assistente financeiro com IA</CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="space-y-4">

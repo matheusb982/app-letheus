@@ -1,10 +1,7 @@
 "use server";
 
-import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/db/connection";
-import { User } from "@/lib/db/models/user";
 import { signIn } from "@/lib/auth";
-import { registerSchema, loginSchema } from "@/lib/validations/auth";
+import { loginSchema } from "@/lib/validations/auth";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 
@@ -43,9 +40,7 @@ export async function loginAction(
   redirect("/dashboard");
 }
 
-export async function registerAction(
-  _prevState: ActionState,
-  _formData: FormData
-): Promise<ActionState> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function registerAction(_prevState: ActionState, _formData: FormData): Promise<ActionState> {
   return { error: "O cadastro está desabilitado. Solicite ao administrador para criar sua conta." };
 }

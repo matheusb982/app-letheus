@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Letheus - Gestão Financeira",
-  description: "Gestão financeira pessoal inteligente",
+  title: "Letheus IA Financeira",
+  description: "Seu assistente financeiro com IA",
 };
 
 export default function RootLayout({
