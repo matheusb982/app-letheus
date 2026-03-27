@@ -37,10 +37,11 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r bg-sidebar">
-      <div className="flex h-14 items-center px-6">
-        <Link href="/dashboard" className="text-xl font-bold">
-          Letheus
+      <div className="flex h-14 flex-col justify-center px-6">
+        <Link href="/dashboard" className="text-lg font-bold leading-tight">
+          Letheus IA Financeira
         </Link>
+        <span className="text-[10px] text-sidebar-foreground/50">Seu assistente financeiro com IA</span>
       </div>
       <Separator />
       <nav className="flex-1 space-y-1 px-3 py-4">

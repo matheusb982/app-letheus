@@ -69,12 +69,6 @@ export function ImportDialog() {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
-  const statusIcon = {
-    created: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-    skipped: <SkipForward className="h-4 w-4 text-amber-500" />,
-    error: <AlertCircle className="h-4 w-4 text-red-500" />,
-  };
-
   const statusLabel = {
     created: <Badge variant="default" className="bg-emerald-600 text-xs">Criada</Badge>,
     skipped: <Badge variant="secondary" className="text-xs">Ignorada</Badge>,

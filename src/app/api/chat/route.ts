@@ -3,7 +3,6 @@ import { google } from "@ai-sdk/google";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connection";
 import { User } from "@/lib/db/models/user";
-import { getUserFamilyId } from "@/lib/actions/family-helpers";
 import { Purchase, type IPurchase } from "@/lib/db/models/purchase";
 import { Revenue, type IRevenue } from "@/lib/db/models/revenue";
 import { Goal, type IGoal } from "@/lib/db/models/goal";
