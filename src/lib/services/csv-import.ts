@@ -1,18 +1,10 @@
-import Papa from "papaparse";
 import { connectDB } from "@/lib/db/connection";
 import { Purchase } from "@/lib/db/models/purchase";
 import { Category, type ICategory } from "@/lib/db/models/category";
 import { classifyWithAI } from "./ai-classifier";
+import { parseCSV, isIgnored, buildFingerprint, type ParsedRow } from "./csv-parsers";
 
-interface ParsedRow {
-  date: string;
-  card_holder?: string;
-  card_last_digits?: string;
-  csv_category: string;
-  csv_description: string;
-  installment?: string;
-  value: number;
-}
+export type { ParsedRow } from "./csv-parsers";
 
 export interface ImportedItem {
   description: string;
@@ -32,77 +24,6 @@ export interface ImportResult {
   items: ImportedItem[];
 }
 
-const IGNORED_DESCRIPTIONS = [
-  "anuidade diferenciada",
-  "estorno tarifa",
-  "pagamento fatura",
-  "pagamentos validos",
-];
-
-function parseBRLValue(raw: string): number {
-  return parseFloat(
-    raw
-      .replace("R$", "")
-      .replace(/\s/g, "")
-      .replace(/\./g, "")
-      .replace(",", ".")
-  );
-}
-
-function removeBOM(text: string): string {
-  return text.replace(/^\uFEFF/, "");
-}
-
-function parseCSVDebito(csvText: string): ParsedRow[] {
-  const cleaned = removeBOM(csvText);
-  const result = Papa.parse<Record<string, string>>(cleaned, {
-    header: true,
-    delimiter: ";",
-    skipEmptyLines: true,
-  });
-
-  return result.data
-    .filter((row) => row["Data"] && row["Valor"])
-    .map((row) => ({
-      date: row["Data"],
-      card_holder: row["Portador"] ?? "",
-      csv_category: "-",
-      csv_description: row["Estabelecimento"] ?? "",
-      installment: row["Parcela"] ?? "",
-      value: parseBRLValue(row["Valor"]),
-    }));
-}
-
-function parseCSVCredito(csvText: string): ParsedRow[] {
-  const cleaned = removeBOM(csvText);
-  const result = Papa.parse<Record<string, string>>(cleaned, {
-    header: true,
-    delimiter: ";",
-    skipEmptyLines: true,
-  });
-
-  return result.data
-    .filter((row) => row["Data de Compra"] && row["Valor (em R$)"])
-    .map((row) => ({
-      date: row["Data de Compra"],
-      card_holder: row["Nome no Cartão"] ?? "",
-      card_last_digits: row["Final do Cartão"] ?? "",
-      csv_category: row["Categoria"] ?? "",
-      csv_description: row["Descrição"] ?? "",
-      installment: row["Parcela"] ?? "",
-      value: parseBRLValue(row["Valor (em R$)"]),
-    }));
-}
-
-function isIgnored(description: string): boolean {
-  const lower = description.toLowerCase();
-  return IGNORED_DESCRIPTIONS.some((ignored) => lower.includes(ignored));
-}
-
-function buildFingerprint(row: ParsedRow): string {
-  return `${row.date}|${row.value}|${row.csv_description}`;
-}
-
 export async function importCSV(
   csvText: string,
   periodId: string,
@@ -112,13 +33,12 @@ export async function importCSV(
 ): Promise<ImportResult> {
   await connectDB();
 
-  // Detect format
-  const isDebito = csvText.includes("Estabelecimento");
-  const rows = isDebito ? parseCSVDebito(csvText) : parseCSVCredito(csvText);
-  const detectedType = isDebito ? "debit" as const : purchaseType;
+  // Detect format and parse
+  const { rows, format } = parseCSV(csvText);
+  const detectedType = format === "debito" ? "debit" as const : purchaseType;
 
   // Filter
-  const validRows = rows.filter((row) => row.value > 0 && !isIgnored(row.csv_description));
+  const validRows = rows.filter((row: ParsedRow) => row.value > 0 && !isIgnored(row.csv_description));
 
   // Load subcategories
   const categories = await Category.find({ category_type: "purchase", ...(familyId ? { family_id: familyId } : {}) }).lean<ICategory[]>();
@@ -130,7 +50,7 @@ export async function importCSV(
   );
 
   // AI classification
-  const uniqueDescriptions = [...new Set(validRows.map((r) => `${r.csv_category}|${r.csv_description}`))];
+  const uniqueDescriptions = [...new Set(validRows.map((r: ParsedRow) => `${r.csv_category}|${r.csv_description}`))];
   const mapping = await classifyWithAI(uniqueDescriptions, subcategories, userId, periodId);
 
   // Load existing fingerprints for dedup

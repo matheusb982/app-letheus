@@ -228,7 +228,7 @@ export function ImportDialog() {
                     disabled={isPending}
                   />
                   <p className="text-muted-foreground text-xs">
-                    Formatos aceitos: extrato débito (C6/Itaú) ou fatura crédito (C6).
+                    Formatos aceitos: extrato débito (C6/Itaú), fatura crédito (C6) ou extrato Nubank.
                   </p>
                 </div>
                 <Button type="submit" disabled={isPending} className="w-full">
