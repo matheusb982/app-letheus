@@ -10,6 +10,14 @@ export const authConfig: NextAuthConfig = {
         pathname.startsWith("/login") ||
         pathname.startsWith("/register") ||
         pathname.startsWith("/forgot-password");
+      const isLandingPage = pathname === "/";
+
+      if (isLandingPage) {
+        if (isLoggedIn) {
+          return Response.redirect(new URL("/dashboard", request.nextUrl));
+        }
+        return true;
+      }
 
       if (isAuthPage) {
         if (isLoggedIn) {
