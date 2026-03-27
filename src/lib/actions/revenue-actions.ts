@@ -2,10 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db/connection";
-import { auth } from "@/lib/auth";
-import { User } from "@/lib/db/models/user";
 import { Revenue, type IRevenue } from "@/lib/db/models/revenue";
 import { revenueSchema } from "@/lib/validations/revenues";
+import { getUserFamilyContext } from "@/lib/actions/family-helpers";
 
 export interface SerializedRevenue {
   id: string;
@@ -15,18 +14,9 @@ export interface SerializedRevenue {
   period_id: string;
 }
 
-async function getUserPeriodId() {
-  const session = await auth();
-  if (!session) throw new Error("Não autorizado");
-  await connectDB();
-  const user = await User.findById(session.user.id);
-  if (!user?.period_id) throw new Error("Nenhum período selecionado");
-  return user.period_id;
-}
-
 export async function getRevenues(): Promise<SerializedRevenue[]> {
-  const periodId = await getUserPeriodId();
-  const revenues = await Revenue.find({ period_id: periodId }).sort({ created_at: -1 }).lean<IRevenue[]>();
+  const { familyId, periodId } = await getUserFamilyContext();
+  const revenues = await Revenue.find({ period_id: periodId, family_id: familyId }).sort({ created_at: -1 }).lean<IRevenue[]>();
 
   return revenues.map((r) => ({
     id: r._id.toString(),
@@ -51,7 +41,7 @@ export async function getRevenueById(id: string): Promise<SerializedRevenue | nu
 }
 
 export async function createRevenue(data: FormData) {
-  const periodId = await getUserPeriodId();
+  const { familyId, periodId } = await getUserFamilyContext();
 
   const raw = {
     value: data.get("value"),
@@ -69,6 +59,7 @@ export async function createRevenue(data: FormData) {
     name: parsed.data.name,
     description: parsed.data.description ?? "",
     period_id: periodId,
+    family_id: familyId,
   });
 
   revalidatePath("/revenues");

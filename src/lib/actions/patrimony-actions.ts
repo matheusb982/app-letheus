@@ -2,11 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db/connection";
-import { auth } from "@/lib/auth";
-import { User } from "@/lib/db/models/user";
 import { Patrimony, type IPatrimony } from "@/lib/db/models/patrimony";
 import { Category } from "@/lib/db/models/category";
 import { patrimonySchema } from "@/lib/validations/patrimonies";
+import { getUserFamilyContext } from "@/lib/actions/family-helpers";
 
 export interface SerializedPatrimony {
   id: string;
@@ -14,15 +13,6 @@ export interface SerializedPatrimony {
   subcategory_name: string;
   subcategory_id: string;
   period_id: string;
-}
-
-async function getUserPeriodId() {
-  const session = await auth();
-  if (!session) throw new Error("Não autorizado");
-  await connectDB();
-  const user = await User.findById(session.user.id);
-  if (!user?.period_id) throw new Error("Nenhum período selecionado");
-  return user.period_id;
 }
 
 async function getSubcategoryName(subcategoryId: string): Promise<string> {
@@ -33,8 +23,8 @@ async function getSubcategoryName(subcategoryId: string): Promise<string> {
 }
 
 export async function getPatrimonies(): Promise<SerializedPatrimony[]> {
-  const periodId = await getUserPeriodId();
-  const patrimonies = await Patrimony.find({ period_id: periodId }).sort({ subcategory_name: 1 }).lean<IPatrimony[]>();
+  const { familyId, periodId } = await getUserFamilyContext();
+  const patrimonies = await Patrimony.find({ period_id: periodId, family_id: familyId }).sort({ subcategory_name: 1 }).lean<IPatrimony[]>();
 
   return patrimonies.map((p) => ({
     id: p._id.toString(),
@@ -59,7 +49,7 @@ export async function getPatrimonyById(id: string): Promise<SerializedPatrimony 
 }
 
 export async function createPatrimony(data: FormData) {
-  const periodId = await getUserPeriodId();
+  const { familyId, periodId } = await getUserFamilyContext();
 
   const raw = {
     value: data.get("value"),
@@ -78,6 +68,7 @@ export async function createPatrimony(data: FormData) {
     subcategory_name: subcategoryName,
     subcategory_id: parsed.data.subcategory_id,
     period_id: periodId,
+    family_id: familyId,
   });
 
   revalidatePath("/patrimonies");

@@ -2,7 +2,7 @@
 
 ## Sobre o Projeto
 
-Reescrita do SmartFinancial (Rails 7 + MongoDB) para Next.js 15. O banco MongoDB é compartilhado com produção — **a modelagem do banco NÃO pode mudar**.
+Reescrita do SmartFinancial (Rails 7 + MongoDB) para Next.js 15. Multi-tenant por família — cada família tem seus dados isolados (períodos, despesas, receitas, metas, patrimônio, categorias). O app Rails foi desativado.
 
 ## Stack
 
@@ -29,7 +29,8 @@ src/
 │   │   ├── goals/        # CRUD
 │   │   ├── patrimonies/  # CRUD + gráfico anual
 │   │   ├── categories/   # CRUD com subcategorias inline
-│   │   └── chat/         # Assistente IA com streaming
+│   │   ├── chat/         # Assistente IA com streaming
+│   │   └── admin/        # Gestão de usuários e famílias (super admin)
 │   └── api/
 │       ├── auth/         # NextAuth handlers
 │       └── chat/         # Streaming endpoint (AI SDK v6)
@@ -41,14 +42,15 @@ src/
 │   ├── categories/       # categories-client
 │   ├── charts/           # annual-line-chart
 │   ├── chat/             # chat-client
+│   ├── admin/            # admin-families-client, admin-family-members-client, admin-users-client
 │   └── shared/           # delete-button, submit-button, subcategory-form, revenue-form, loading
 ├── lib/
 │   ├── auth.ts           # NextAuth config + JWT callbacks
 │   ├── auth.config.ts    # Middleware auth config
 │   ├── db/
 │   │   ├── connection.ts # Mongoose singleton
-│   │   └── models/       # 10 models (NÃO alterar schemas — banco em produção)
-│   ├── actions/          # Server Actions (CRUD, dashboard, chart, chat, import, period)
+│   │   └── models/       # 12 models (inclui Family)
+│   ├── actions/          # Server Actions (CRUD, dashboard, chart, chat, import, period, family)
 │   ├── services/         # Lógica de negócio (csv-import, text-import, ai-classifier, payments-per-category)
 │   ├── validations/      # Zod schemas por entidade
 │   └── utils/            # format, months, constants, cn
@@ -73,16 +75,25 @@ npm run lint         # ESLint
 ## Regras Importantes
 
 ### Banco de Dados
-- **NUNCA alterar schemas dos models** — o banco MongoDB é compartilhado com a app Rails em produção
 - Timestamps são snake_case: `created_at`, `updated_at`
 - Collections com nomes explícitos: `mongoose.model('User', schema, 'users')`
 - Subcategories são embedded documents em Category (subdocuments Mongoose)
 - Usar `.lean<Type>()` em queries para tipagem correta
 - Sempre chamar `connectDB()` antes de queries
 
+### Multi-Tenancy (Família)
+- Model `Family` representa um tenant — cada família é uma plataforma isolada
+- Todos os dados financeiros (Period, Purchase, Revenue, Goal, Patrimony, Category) têm `family_id`
+- Toda query DEVE filtrar por `family_id` — usar `getUserFamilyContext()` ou `getUserFamilyId()` de `family-helpers.ts`
+- JWT contém `familyId` (além de `userId` e `periodId`)
+- Categorias com `family_id: null` são templates globais, clonados ao criar nova família
+- Self-registration desabilitado — super admin cria famílias e seus membros via `/admin/families`
+- `ADMIN_EMAIL` define o super admin que pode criar famílias
+- Script de migração: `npx tsx scripts/migrate-family.ts`
+
 ### Auth
 - Senhas compatíveis com bcrypt do Devise (Rails): `$2a$` hash
-- JWT contém `userId` e `periodId`
+- JWT contém `userId`, `periodId` e `familyId`
 - Period é relido do DB em mutations (não confiar no JWT para escrita)
 - Middleware protege todas as rotas exceto `/login`, `/register`, `/forgot-password`
 

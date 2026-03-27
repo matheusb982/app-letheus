@@ -43,6 +43,7 @@ export async function getGoalSuggestions(): Promise<GoalSuggestionsResult> {
 
   const user = await User.findById(session.user.id);
   if (!user?.period_id) throw new Error("Nenhum período selecionado");
+  const familyId = user.family_id;
 
   // Get current period
   const currentPeriod = await Period.findById(user.period_id).lean<IPeriod>();
@@ -55,12 +56,12 @@ export async function getGoalSuggestions(): Promise<GoalSuggestionsResult> {
   for (let i = 0; i < 3; i++) {
     m--;
     if (m < 1) { m = 12; y--; }
-    const p = await Period.findOne({ month: m, year: y }).lean<IPeriod>();
+    const p = await Period.findOne({ month: m, year: y, family_id: familyId }).lean<IPeriod>();
     if (p) previousPeriods.push(p);
   }
 
   // Get current goals
-  const currentGoals = await Goal.find({ period_id: user.period_id }).lean<IGoal[]>();
+  const currentGoals = await Goal.find({ period_id: user.period_id, family_id: familyId }).lean<IGoal[]>();
   if (currentGoals.length === 0) {
     return { suggestions: [], total_revenue: 0, total_current_goals: 0, total_suggested: 0 };
   }
@@ -69,6 +70,7 @@ export async function getGoalSuggestions(): Promise<GoalSuggestionsResult> {
   const previousPeriodIds = previousPeriods.map((p) => p._id);
   const allPurchases = await Purchase.find({
     period_id: { $in: previousPeriodIds },
+    family_id: familyId,
   }).lean();
 
   // Build spending map: subcategory_id -> { periodId -> total }
@@ -120,7 +122,7 @@ export async function getGoalSuggestions(): Promise<GoalSuggestionsResult> {
   }
 
   // Get current revenue
-  const revenues = await Revenue.find({ period_id: user.period_id }).lean();
+  const revenues = await Revenue.find({ period_id: user.period_id, family_id: familyId }).lean();
   const totalRevenue = revenues.reduce((s, r) => s + ((r as Record<string, unknown>).value as number ?? 0), 0);
 
   // Build prompt for AI

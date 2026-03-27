@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db/connection";
 import { Category, type ICategory } from "@/lib/db/models/category";
 import { categorySchema, subcategorySchema } from "@/lib/validations/categories";
+import { getUserFamilyId } from "@/lib/actions/family-helpers";
 
 export interface SerializedSubcategory {
   id: string;
@@ -22,7 +23,8 @@ export interface SerializedCategory {
 
 export async function getCategories(): Promise<SerializedCategory[]> {
   await connectDB();
-  const categories = await Category.find().sort({ name: 1 }).lean<ICategory[]>();
+  const familyId = await getUserFamilyId();
+  const categories = await Category.find({ family_id: familyId }).sort({ name: 1 }).lean<ICategory[]>();
 
   return categories.map((c) => ({
     id: c._id.toString(),
@@ -40,7 +42,8 @@ export async function getCategories(): Promise<SerializedCategory[]> {
 
 export async function getSubcategoriesByType(categoryType: "purchase" | "patrimony"): Promise<SerializedSubcategory[]> {
   await connectDB();
-  const categories = await Category.find({ category_type: categoryType }).lean<ICategory[]>();
+  const familyId = await getUserFamilyId();
+  const categories = await Category.find({ category_type: categoryType, family_id: familyId }).lean<ICategory[]>();
 
   const subcategories: SerializedSubcategory[] = [];
   for (const cat of categories) {
@@ -58,6 +61,7 @@ export async function getSubcategoriesByType(categoryType: "purchase" | "patrimo
 
 export async function createCategory(data: FormData) {
   await connectDB();
+  const familyId = await getUserFamilyId();
 
   const raw = {
     name: data.get("name"),
@@ -70,7 +74,7 @@ export async function createCategory(data: FormData) {
     return { error: parsed.error.errors[0].message };
   }
 
-  await Category.create(parsed.data);
+  await Category.create({ ...parsed.data, family_id: familyId });
 
   revalidatePath("/categories");
   return { success: true };

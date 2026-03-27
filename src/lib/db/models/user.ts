@@ -8,6 +8,8 @@ export interface IUser extends Document {
   reset_password_sent_at?: Date;
   remember_created_at?: Date;
   period_id?: mongoose.Types.ObjectId;
+  family_id?: mongoose.Types.ObjectId;
+  family_role?: "admin" | "member";
   created_at: Date;
   updated_at: Date;
 }
@@ -21,6 +23,8 @@ const UserSchema = new Schema<IUser>(
     reset_password_sent_at: { type: Date },
     remember_created_at: { type: Date },
     period_id: { type: Schema.Types.ObjectId, ref: "Period" },
+    family_id: { type: Schema.Types.ObjectId, ref: "Family" },
+    family_role: { type: String, enum: ["admin", "member"] },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

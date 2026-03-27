@@ -3,6 +3,7 @@ import { google } from "@ai-sdk/google";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connection";
 import { User } from "@/lib/db/models/user";
+import { getUserFamilyId } from "@/lib/actions/family-helpers";
 import { Purchase, type IPurchase } from "@/lib/db/models/purchase";
 import { Revenue, type IRevenue } from "@/lib/db/models/revenue";
 import { Goal, type IGoal } from "@/lib/db/models/goal";
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
 
   // Find period (check if user mentions a specific month)
   const user = await User.findById(session.user.id);
+  const familyId = user?.family_id;
   let periodId = user?.period_id;
 
   const monthMatch = userMessage.toLowerCase().match(
@@ -84,6 +86,7 @@ export async function POST(req: Request) {
       const foundPeriod = await Period.findOne<IPeriod>({
         month: parseInt(monthNum),
         year,
+        family_id: familyId,
       });
       if (foundPeriod) periodId = foundPeriod._id;
     }
@@ -91,10 +94,10 @@ export async function POST(req: Request) {
 
   // Get financial data
   const [purchases, revenues, goals, patrimonies, currentPeriod] = await Promise.all([
-    Purchase.find({ period_id: periodId }).lean<IPurchase[]>(),
-    Revenue.find({ period_id: periodId }).lean<IRevenue[]>(),
-    Goal.find({ period_id: periodId }).lean<IGoal[]>(),
-    Patrimony.find({ period_id: periodId }).lean<IPatrimony[]>(),
+    Purchase.find({ period_id: periodId, family_id: familyId }).lean<IPurchase[]>(),
+    Revenue.find({ period_id: periodId, family_id: familyId }).lean<IRevenue[]>(),
+    Goal.find({ period_id: periodId, family_id: familyId }).lean<IGoal[]>(),
+    Patrimony.find({ period_id: periodId, family_id: familyId }).lean<IPatrimony[]>(),
     Period.findById(periodId).lean<IPeriod>(),
   ]);
 

@@ -76,12 +76,13 @@ export async function getDashboardData() {
   if (!user?.period_id) return null;
 
   const periodId = user.period_id;
+  const familyId = user.family_id;
 
   const [purchases, revenues, goals, patrimonies] = await Promise.all([
-    Purchase.find({ period_id: periodId }).lean<IPurchase[]>(),
-    Revenue.find({ period_id: periodId }).lean<IRevenue[]>(),
-    Goal.find({ period_id: periodId }).lean<IGoal[]>(),
-    Patrimony.find({ period_id: periodId }).lean<IPatrimony[]>(),
+    Purchase.find({ period_id: periodId, family_id: familyId }).lean<IPurchase[]>(),
+    Revenue.find({ period_id: periodId, family_id: familyId }).lean<IRevenue[]>(),
+    Goal.find({ period_id: periodId, family_id: familyId }).lean<IGoal[]>(),
+    Patrimony.find({ period_id: periodId, family_id: familyId }).lean<IPatrimony[]>(),
   ]);
 
   const totalRevenue = revenues.reduce((sum, r) => sum + r.value, 0);
@@ -102,10 +103,10 @@ export async function getDashboardData() {
   if (currentPeriod) {
     const prevMonth = currentPeriod.month === 1 ? 12 : currentPeriod.month - 1;
     const prevYear = currentPeriod.month === 1 ? currentPeriod.year - 1 : currentPeriod.year;
-    const prevPeriod = await Period.findOne({ month: prevMonth, year: prevYear });
+    const prevPeriod = await Period.findOne({ month: prevMonth, year: prevYear, family_id: familyId });
 
     if (prevPeriod) {
-      const prevPatrimonies = await Patrimony.find({ period_id: prevPeriod._id }).lean<IPatrimony[]>();
+      const prevPatrimonies = await Patrimony.find({ period_id: prevPeriod._id, family_id: familyId }).lean<IPatrimony[]>();
       const prevTotalPatrimony = prevPatrimonies.reduce((sum, p) => sum + p.value, 0);
       performanceValue = totalPatrimony - prevTotalPatrimony - totalAporte;
     }
@@ -121,7 +122,7 @@ export async function getDashboardData() {
     performanceValue,
   };
 
-  const paymentsPerCategory = await getPaymentsPerCategory(purchases, goals);
+  const paymentsPerCategory = await getPaymentsPerCategory(purchases, goals, familyId);
 
   const goalAlerts = calculateGoalAlerts(goals, purchases);
 
@@ -136,9 +137,11 @@ export async function getGoalAlerts(): Promise<GoalAlert[]> {
   const user = await User.findById(session.user.id);
   if (!user?.period_id) return [];
 
+  const familyId = user.family_id;
+
   const [purchases, goals] = await Promise.all([
-    Purchase.find({ period_id: user.period_id }).lean<IPurchase[]>(),
-    Goal.find({ period_id: user.period_id }).lean<IGoal[]>(),
+    Purchase.find({ period_id: user.period_id, family_id: familyId }).lean<IPurchase[]>(),
+    Goal.find({ period_id: user.period_id, family_id: familyId }).lean<IGoal[]>(),
   ]);
 
   return calculateGoalAlerts(goals, purchases);
