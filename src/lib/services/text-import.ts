@@ -138,7 +138,7 @@ export async function importText(
 
   // AI classification
   const uniqueDescriptions = [...new Set(validRows.map((r) => `${r.csv_category}|${r.csv_description}`))];
-  const mapping = await classifyWithAI(uniqueDescriptions, subcategories, userId, periodId);
+  const mapping = await classifyWithAI(uniqueDescriptions, subcategories, userId, periodId, familyId);
 
   // Existing fingerprints for dedup
   const existingPurchases = await Purchase.find({

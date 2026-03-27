@@ -29,11 +29,16 @@ export async function POST(req: Request) {
   const userMessage = lastMsg?.content ?? lastMsg?.parts?.find((p: {type: string; text?: string}) => p.type === "text")?.text ?? "";
 
 
+  // Get user and family context
+  const user = await User.findById(session.user.id);
+  const familyId = user?.family_id;
+
   // Rate limit
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const dailyCount = await ChatMessage.countDocuments({
     user_id: session.user.id,
+    family_id: familyId,
     role: "user",
     created_at: { $gte: todayStart },
   });
@@ -54,13 +59,14 @@ export async function POST(req: Request) {
 
   const cached = await CachedResponse.findOne<ICachedResponse>({
     user_id: session.user.id,
+    family_id: familyId,
     question_hash: questionHash,
     expires_at: { $gt: new Date() },
   });
 
   if (cached) {
     // Save to chat history
-    await saveConversation(session.user.id, chatSessionId, userMessage, cached.answer);
+    await saveConversation(session.user.id, familyId, chatSessionId, userMessage, cached.answer);
     // Return as text stream so useChat can process it
     return new Response(cached.answer, {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
@@ -68,8 +74,6 @@ export async function POST(req: Request) {
   }
 
   // Find period (check if user mentions a specific month)
-  const user = await User.findById(session.user.id);
-  const familyId = user?.family_id;
   let periodId = user?.period_id;
 
   const monthMatch = userMessage.toLowerCase().match(
@@ -102,8 +106,8 @@ export async function POST(req: Request) {
 
   const financialContext = buildFinancialContext(purchases, revenues, goals, patrimonies, currentPeriod);
 
-  // Get conversation history
-  const recentMessages = await ChatMessage.find({ chat_session_id: chatSessionId })
+  // Get conversation history (validate session belongs to this family)
+  const recentMessages = await ChatMessage.find({ chat_session_id: chatSessionId, family_id: familyId })
     .sort({ created_at: -1 })
     .limit(4)
     .lean();
@@ -139,9 +143,10 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
       maxOutputTokens: 4096,
       async onFinish({ text }) {
         // Save conversation and cache
-        await saveConversation(session!.user.id, chatSessionId, userMessage, text);
+        await saveConversation(session!.user.id, familyId, chatSessionId, userMessage, text);
         await CachedResponse.create({
           user_id: session!.user.id,
+          family_id: familyId,
           question_hash: questionHash,
           question: userMessage,
           answer: text,
@@ -239,6 +244,7 @@ SALDO: R$ ${balance.toFixed(2)}`;
 
 async function saveConversation(
   userId: string,
+  familyId: unknown,
   chatSessionId: string,
   question: string,
   answer: string
@@ -246,8 +252,8 @@ async function saveConversation(
   if (!chatSessionId) return;
   const now = new Date();
   await ChatMessage.create([
-    { content: question, role: "user", chat_session_id: chatSessionId, user_id: userId, created_at: now, updated_at: now },
-    { content: answer, role: "assistant", chat_session_id: chatSessionId, user_id: userId, created_at: new Date(now.getTime() + 1), updated_at: new Date(now.getTime() + 1) },
+    { content: question, role: "user", chat_session_id: chatSessionId, user_id: userId, family_id: familyId, created_at: now, updated_at: now },
+    { content: answer, role: "assistant", chat_session_id: chatSessionId, user_id: userId, family_id: familyId, created_at: new Date(now.getTime() + 1), updated_at: new Date(now.getTime() + 1) },
   ]);
   await ChatSession.findByIdAndUpdate(chatSessionId, { updated_at: new Date() });
 }

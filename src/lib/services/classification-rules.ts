@@ -24,12 +24,16 @@ export function normalizeDescription(desc: string): string {
  */
 export async function matchRules(
   descriptions: string[],
-  userId: string
+  userId: string,
+  familyId?: string
 ): Promise<Map<string, { subcategoryId: string; subcategoryName: string }>> {
   await connectDB();
   const result = new Map<string, { subcategoryId: string; subcategoryName: string }>();
 
-  const rules = await ClassificationRule.find({ user_id: userId }).lean();
+  const rules = await ClassificationRule.find({
+    user_id: userId,
+    ...(familyId ? { family_id: familyId } : {}),
+  }).lean();
   if (rules.length === 0) return result;
 
   for (const desc of descriptions) {
@@ -55,6 +59,7 @@ export async function matchRules(
 export async function getFewShotExamples(
   userId: string,
   periodId: string,
+  familyId?: string,
   limit = 30
 ): Promise<Array<{ description: string; subcategory_name: string }>> {
   await connectDB();
@@ -62,6 +67,7 @@ export async function getFewShotExamples(
   // Busca purchases recentes que tenham subcategory_name preenchido
   const purchases = await Purchase.find({
     period_id: periodId,
+    ...(familyId ? { family_id: familyId } : {}),
     subcategory_name: { $exists: true, $ne: "" },
     description: { $exists: true, $ne: "" },
   })
@@ -95,7 +101,8 @@ export async function saveClassificationRule(
   description: string,
   subcategoryId: string,
   subcategoryName: string,
-  userId: string
+  userId: string,
+  familyId?: string
 ): Promise<void> {
   if (!description || !subcategoryId) return;
 
@@ -104,9 +111,10 @@ export async function saveClassificationRule(
 
   await connectDB();
   await ClassificationRule.findOneAndUpdate(
-    { user_id: userId, pattern },
+    { user_id: userId, pattern, ...(familyId ? { family_id: familyId } : {}) },
     {
       user_id: userId,
+      family_id: familyId,
       pattern,
       subcategory_id: subcategoryId,
       subcategory_name: subcategoryName,

@@ -114,6 +114,7 @@ export async function createPurchase(data: FormData) {
 
 export async function updatePurchase(id: string, data: FormData) {
   await connectDB();
+  const { familyId } = await getUserFamilyContext();
 
   const raw = {
     value: data.get("value"),
@@ -154,7 +155,8 @@ export async function updatePurchase(id: string, data: FormData) {
         parsed.data.description,
         parsed.data.subcategory_id,
         subcategoryName,
-        session.user.id
+        session.user.id,
+        familyId.toString()
       );
     }
   }

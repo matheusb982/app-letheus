@@ -5,6 +5,7 @@ export interface IChatMessage extends Document {
   role: "user" | "assistant";
   chat_session_id: mongoose.Types.ObjectId;
   user_id: mongoose.Types.ObjectId;
+  family_id: mongoose.Types.ObjectId;
   created_at: Date;
   updated_at: Date;
 }
@@ -19,11 +20,14 @@ const ChatMessageSchema = new Schema<IChatMessage>(
       required: true,
     },
     user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    family_id: { type: Schema.Types.ObjectId, ref: "Family", required: true },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
   }
 );
+
+ChatMessageSchema.index({ family_id: 1, chat_session_id: 1 });
 
 export const ChatMessage =
   mongoose.models.ChatMessage ||

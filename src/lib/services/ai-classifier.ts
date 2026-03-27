@@ -11,7 +11,8 @@ export async function classifyWithAI(
   descriptions: string[],
   subcategories: SubcategoryOption[],
   userId?: string,
-  periodId?: string
+  periodId?: string,
+  familyId?: string
 ): Promise<Map<string, string>> {
   const mapping = new Map<string, string>();
 
@@ -27,7 +28,7 @@ export async function classifyWithAI(
   let remaining = [...descriptions];
 
   if (userId) {
-    const ruleMatches = await matchRules(descriptions, userId);
+    const ruleMatches = await matchRules(descriptions, userId, familyId);
     for (const [desc, match] of ruleMatches) {
       // Verificar se a subcategoria da regra ainda existe
       const valid = subcategories.find((s) => s.id === match.subcategoryId);
@@ -46,7 +47,7 @@ export async function classifyWithAI(
   // Step 2: Buscar exemplos few-shot do histórico
   let fewShotBlock = "";
   if (userId && periodId) {
-    const examples = await getFewShotExamples(userId, periodId);
+    const examples = await getFewShotExamples(userId, periodId, familyId);
     if (examples.length > 0) {
       fewShotBlock = `\nExemplos de classificações anteriores deste usuário (use como referência):
 ${examples.map((e) => `- "${e.description}" → ${e.subcategory_name}`).join("\n")}
