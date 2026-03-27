@@ -25,7 +25,7 @@ const COLLECTIONS_WITH_FAMILY = [
 
 async function seed() {
   // Connect to prod
-  const prod = await mongoose.createConnection(PROD_URI).asPromise();
+  const prod = await mongoose.createConnection(PROD_URI!).asPromise();
   console.log("Connected to PROD");
 
   const prodDb = prod.db!;
