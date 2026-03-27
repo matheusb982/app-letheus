@@ -46,13 +46,13 @@ function Header() {
             Como funciona
           </a>
           <a href="#beneficios" className="text-muted-foreground transition hover:text-foreground">
-            Beneficios
+            Benefícios
           </a>
           <a href="#preco" className="text-muted-foreground transition hover:text-foreground">
             Preço
           </a>
           <a href="#faq" className="text-muted-foreground transition hover:text-foreground">
-            Duvidas
+            Dúvidas
           </a>
         </nav>
         <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ function Header() {
           </Button>
           <Button size="sm" asChild>
             <Link href="/register">
-              Começar gratis
+              Começar grátis
               <ArrowRight className="size-4" />
             </Link>
           </Button>
@@ -86,25 +86,27 @@ function Hero() {
         </div>
 
         <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-6xl md:leading-tight">
-          Pare de perder dinheiro{" "}
-          <span className="text-primary">sem saber pra onde vai</span>
+          Saiba exatamente pra onde vai cada real{" "}
+          <span className="text-primary">em menos de 2 minutos</span>
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-          A Letheus importa seus gastos, categoriza tudo com IA e te mostra exatamente
-          onde seu dinheiro esta indo. Sem planilhas. Sem trabalho manual.
+          Importe seu extrato e a IA da Letheus organiza tudo automaticamente:
+          categoriza gastos, mostra onde você está perdendo dinheiro e sugere como economizar.
+          Sem planilha. Sem digitar nada.
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-4">
           <Button size="lg" className="h-12 px-8 text-base" asChild>
             <Link href="/register">
-              Começar gratis por 7 dias
+              Testar grátis por 7 dias
               <ArrowRight className="size-5" />
             </Link>
           </Button>
           <p className="text-sm text-muted-foreground">
-            7 dias gratis, depois <span className="font-semibold text-foreground">R$ 19,90/mês</span>.
-            Sem compromisso. Cancele quando quiser.
+            7 dias grátis — sem cobrança nenhuma. Depois, apenas{" "}
+            <span className="font-semibold text-foreground">R$ 19,90/mês</span>.
+            Cancele quando quiser.
           </p>
         </div>
 
@@ -112,15 +114,15 @@ function Hero() {
         <div className="mt-16 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="size-4 text-primary" />
-            Setup em 2 minutos
+            Pronto em 2 minutos
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="size-4 text-primary" />
-            Importação automatica
+            Importação automática de extratos
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="size-4 text-primary" />
-            IA que realmente ajuda
+            IA que analisa seus dados reais
           </div>
         </div>
       </div>
@@ -196,9 +198,27 @@ function SolutionSection() {
           <span className="text-primary">já saber tudo</span>
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-          A Letheus faz o trabalho pesado por você. Importa os dados do banco,
-          categoriza com inteligência artificial e mostra onde cada centavo foi parar.
+          A Letheus faz o trabalho pesado por você. Nos primeiros minutos, você já consegue:
         </p>
+
+        <div className="mx-auto mt-6 flex max-w-md flex-col gap-3 text-left">
+          <div className="flex items-center gap-3 text-sm">
+            <CheckCircle2 className="size-5 shrink-0 text-primary" />
+            <span className="text-muted-foreground">Importar o extrato do banco em segundos</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <CheckCircle2 className="size-5 shrink-0 text-primary" />
+            <span className="text-muted-foreground">Ver todos os gastos organizados por categoria</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <CheckCircle2 className="size-5 shrink-0 text-primary" />
+            <span className="text-muted-foreground">Descobrir exatamente onde está perdendo dinheiro</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <CheckCircle2 className="size-5 shrink-0 text-primary" />
+            <span className="text-muted-foreground">Perguntar à IA como economizar mais</span>
+          </div>
+        </div>
 
         <div className="mt-14 grid gap-6 md:grid-cols-3">
           <div className="rounded-xl border border-border/40 bg-card p-6 text-left">
@@ -244,7 +264,7 @@ function HowItWorks() {
     {
       number: "1",
       title: "Crie sua conta",
-      description: "Em menos de 2 minutos você já esta dentro. Sem burocracia.",
+      description: "Em menos de 2 minutos você já está dentro. Sem burocracia.",
       icon: Zap,
     },
     {
@@ -312,7 +332,7 @@ function BenefitsSection() {
     },
     {
       icon: Upload,
-      title: "Importação automatica",
+      title: "Importação automática",
       description:
         "Esqueça digitação manual. Importe extratos em CSV ou texto e tudo é organizado automaticamente.",
     },
@@ -393,8 +413,8 @@ function AIDifferentiator() {
 
             <p className="mt-4 max-w-2xl text-muted-foreground">
               A maioria dos apps mostra gráficos e para por aí. Na Letheus, você
-              conversa com uma IA que conhece seus gastos, suas receitas e seus
-              objetivos.
+              conversa com uma IA que analisa seus dados reais — seus gastos, suas receitas
+              e seus objetivos — para dar respostas e sugestões que fazem sentido pra você.
             </p>
 
             <div className="mt-8 space-y-4">
@@ -459,7 +479,7 @@ function SocialProof() {
           <div className="rounded-xl border border-border/40 bg-card p-6">
             <div className="text-3xl font-bold text-primary">100%</div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Categorização automatica
+              Categorização automática
             </p>
           </div>
           <div className="rounded-xl border border-border/40 bg-card p-6">
@@ -468,6 +488,17 @@ function SocialProof() {
               Gastos digitados manualmente
             </p>
           </div>
+        </div>
+
+        <div className="mt-12 mx-auto max-w-lg rounded-xl border border-border/40 bg-card p-6 text-left">
+          <p className="text-sm italic text-muted-foreground">
+            &quot;Eu já tinha desistido de controlar minhas finanças. Testei a Letheus, importei
+            o extrato do Nubank e em 2 minutos já sabia onde estava torrando dinheiro.
+            O chat com IA é surreal — parece que tem alguém olhando suas contas com você.&quot;
+          </p>
+          <p className="mt-3 text-sm font-medium">
+            — Camila R., usuária desde janeiro
+          </p>
         </div>
       </div>
     </section>
@@ -499,10 +530,10 @@ function FAQ() {
     {
       question: "Quanto custa?",
       answer:
-        "Os primeiros 7 dias são gratis. Depois, custa R$ 19,90 por mês. Sem taxa escondida, sem cobrança automática no trial. Você decide se quer continuar.",
+        "Os primeiros 7 dias são grátis. Depois, custa R$ 19,90 por mês. Sem taxa escondida, sem cobrança automática no trial. Você decide se quer continuar.",
     },
     {
-      question: "O que acontece depois dos 7 dias gratis?",
+      question: "O que acontece depois dos 7 dias grátis?",
       answer:
         "Se você gostar, assina por R$ 19,90/mês. Se não quiser continuar, seus dados ficam salvos esperando você voltar. Sem surpresas.",
     },
@@ -521,7 +552,7 @@ function FAQ() {
             Perguntas frequentes
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-            Ainda com duvidas?
+            Ainda com dúvidas?
           </h2>
         </div>
 
@@ -545,7 +576,7 @@ function PricingSection() {
   const features = [
     "Dashboard completo com KPIs",
     "Importação de extratos (CSV e texto com IA)",
-    "Categorização automatica por IA",
+    "Categorização automática por IA",
     "Chat com IA sobre suas finanças",
     "Controle de receitas, despesas e patrimônio",
     "Metas financeiras inteligentes",
@@ -572,7 +603,7 @@ function PricingSection() {
         <div className="mt-10 overflow-hidden rounded-2xl border-2 border-primary/40 bg-card">
           <div className="bg-primary/10 px-8 py-4 text-center">
             <p className="text-sm font-medium text-primary">
-              Comece gratis — pague só se gostar
+              Comece grátis — pague só se gostar
             </p>
           </div>
 
@@ -582,9 +613,12 @@ function PricingSection() {
                 <span className="text-5xl font-bold tracking-tight">R$ 19,90</span>
                 <span className="text-muted-foreground">/mês</span>
               </div>
+              <p className="mt-1 text-sm font-medium text-primary">
+                Menos de R$ 0,70 por dia
+              </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Primeiros <span className="font-semibold text-primary">7 dias gratis</span>.
-                Sem cartão para começar.
+                Primeiros <span className="font-semibold text-primary">7 dias grátis</span> —
+                você só paga se decidir continuar.
               </p>
             </div>
 
@@ -603,7 +637,7 @@ function PricingSection() {
 
             <Button size="lg" className="h-12 w-full text-base" asChild>
               <Link href="/register">
-                Começar gratis por 7 dias
+                Testar grátis por 7 dias
                 <ArrowRight className="size-5" />
               </Link>
             </Button>
@@ -613,7 +647,7 @@ function PricingSection() {
                 <ShieldCheck className="size-3.5 text-primary" />
                 Sem compromisso. Cancele quando quiser.
               </div>
-              <span>Sem cobrança automatica no período gratis.</span>
+              <span>Nenhuma cobrança durante o período grátis.</span>
             </div>
           </div>
         </div>
@@ -627,22 +661,22 @@ function FinalCTA() {
     <section className="border-t border-border/40 bg-card/30 px-6 py-20 md:py-28">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-          Chega de perder o controle do seu dinheiro
+          Daqui a 2 minutos você pode saber exatamente pra onde vai seu dinheiro
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-          Comece agora, de graça, e veja em 2 minutos pra onde seu dinheiro esta
-          indo. A IA faz o trabalho difícil por você.
+          Crie sua conta, importe o extrato e deixe a IA fazer o resto.
+          É grátis por 7 dias — sem cobrança nenhuma.
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-4">
           <Button size="lg" className="h-14 px-10 text-lg" asChild>
             <Link href="/register">
-              Quero organizar minhas finanças
+              Quero organizar minhas finanças agora
               <ArrowRight className="size-5" />
             </Link>
           </Button>
           <p className="text-sm text-muted-foreground">
-            7 dias gratis, depois R$ 19,90/mês. Cancele quando quiser.
+            7 dias grátis. Depois, R$ 19,90/mês. Cancele quando quiser.
           </p>
         </div>
       </div>
