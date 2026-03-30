@@ -152,13 +152,32 @@ async function seed() {
     updated_at: now,
   }));
 
-  await db.collection("categories").insertMany(docs);
-  console.log(`\nCreated ${docs.length} global category templates:`);
-  for (const doc of docs) {
-    console.log(
-      `  ${doc.name} (${doc.category_type}) — ${doc.subcategories.length} subcategories`
-    );
+  // Drop legacy unique index on name only (if exists) — should be { name, family_id }
+  try {
+    await db.collection("categories").dropIndex("name_1");
+    console.log("Dropped legacy 'name_1' index (replaced by name_1_family_id_1)");
+  } catch {
+    // Index doesn't exist, that's fine
   }
+
+  let created = 0;
+  for (const doc of docs) {
+    try {
+      await db.collection("categories").insertOne(doc);
+      created++;
+      console.log(
+        `  ${doc.name} (${doc.category_type}) — ${doc.subcategories.length} subcategories`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("E11000")) {
+        console.log(`  ${doc.name} — skipped (already exists)`);
+      } else {
+        throw err;
+      }
+    }
+  }
+  console.log(`\nCreated ${created} global category templates.`);
 
   console.log("\nDone!");
   await conn.close();

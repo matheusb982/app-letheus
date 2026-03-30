@@ -154,16 +154,19 @@ ${JSON.stringify(goalsInfo, null, 2)}
 REGRAS INVIOLÁVEIS:
 1. A SOMA de todos os suggested_value NÃO PODE ultrapassar R$ ${maxBudget.toFixed(2)}
 2. NUNCA sugira um valor MAIOR que a meta atual — o objetivo é economizar, não gastar mais
-3. Se a média está ABAIXO da meta → REDUZA a meta (o usuário já gasta menos, a meta pode ser menor)
-4. Se a média está PRÓXIMA da meta (±10%) → MANTENHA o valor atual
-5. Se a média está ACIMA da meta → MANTENHA a meta (incentivar o usuário a reduzir)
-6. Se a tendência é de QUEDA → reduza a meta acompanhando a tendência de economia
-7. Gastos fixos (internet, plano de saúde, aluguel) devem ter meta = média arredondada pra cima (não faz sentido meta menor que o fixo)
+3. GASTOS FIXOS (mensalidades, contas, aluguel, condomínio, internet, plano de saúde, DAS, INSS, impostos fixos): NUNCA reduza abaixo da média. São contas que o usuário NÃO TEM COMO diminuir. Sugira exatamente a média arredondada pra cima ou mantenha a meta atual.
+4. GASTOS VARIÁVEIS (restaurante, mercado, lazer, roupas, combustível): estes SIM podem ser reduzidos. Se a média está abaixo da meta, reduza.
+5. Se a média está PRÓXIMA da meta (±10%) → MANTENHA o valor atual
+6. Se a média está ACIMA da meta → MANTENHA a meta (incentivar o usuário a reduzir)
+7. Se a tendência é de QUEDA em gastos variáveis → reduza a meta acompanhando
+8. Para respeitar o teto de 80%, reduza APENAS os gastos variáveis, NUNCA os fixos
 
 EXEMPLOS CORRETOS:
-- Internet: meta R$ 135, média R$ 134 → sugerir R$ 135 (gasto fixo, manter)
-- Restaurante: meta R$ 800, média R$ 520 → sugerir R$ 570 (gasta menos, reduzir meta)
-- Combustível: meta R$ 300, média R$ 350 → sugerir R$ 300 (acima da meta, manter pra reduzir)
+- Internet R$ 134/mês (fixo): meta R$ 135 → sugerir R$ 135 (NÃO reduzir, é conta fixa)
+- DAS R$ 1181/mês (fixo): meta R$ 1196 → sugerir R$ 1196 (NÃO reduzir, é imposto)
+- Aluguel R$ 2000/mês (fixo): meta R$ 2000 → sugerir R$ 2000 (NÃO reduzir)
+- Restaurante: meta R$ 800, média R$ 520 → sugerir R$ 570 (variável, pode reduzir)
+- Combustível: meta R$ 300, média R$ 350 → sugerir R$ 300 (acima, manter pra reduzir)
 - Mercado: meta R$ 1200, média R$ 1180 → sugerir R$ 1200 (próximo, manter)
 
 EXEMPLOS INCORRETOS (NÃO FAÇA ISSO):
@@ -265,6 +268,13 @@ function suggestValueForGoal(
   };
 }
 
+function isFixedExpense(suggestion: GoalSuggestion): boolean {
+  // A fixed expense has avg very close to the goal (±10%) — it's a bill, not discretionary
+  if (suggestion.avg_3m === 0) return false;
+  const ratio = suggestion.avg_3m / suggestion.suggested_value;
+  return ratio >= 0.85 && ratio <= 1.15;
+}
+
 function capSuggestionsToRevenue(
   suggestions: GoalSuggestion[],
   totalRevenue: number
@@ -276,13 +286,30 @@ function capSuggestionsToRevenue(
 
   if (currentTotal <= maxTotal) return suggestions;
 
-  // Reduzir proporcionalmente
-  const factor = maxTotal / currentTotal;
-  return suggestions.map((s) => ({
-    ...s,
-    suggested_value: Math.round(s.suggested_value * factor * 100) / 100,
-    reason: s.reason + (factor < 0.95 ? " (ajustado para caber em 80% da receita)" : ""),
-  }));
+  // Separate fixed vs variable expenses
+  const fixed = suggestions.filter((s) => isFixedExpense(s));
+  const variable = suggestions.filter((s) => !isFixedExpense(s));
+
+  const fixedTotal = fixed.reduce((s, g) => s + g.suggested_value, 0);
+  const variableTotal = variable.reduce((s, g) => s + g.suggested_value, 0);
+
+  // Budget remaining for variable expenses after fixed
+  const variableBudget = maxTotal - fixedTotal;
+
+  // If fixed alone exceeds budget, can't do much — return as is
+  if (variableBudget <= 0) return suggestions;
+
+  // Only reduce variable expenses proportionally
+  const factor = variableBudget / variableTotal;
+
+  return suggestions.map((s) => {
+    if (isFixedExpense(s)) return s; // Preserve fixed expenses
+    return {
+      ...s,
+      suggested_value: Math.round(s.suggested_value * factor * 100) / 100,
+      reason: s.reason + (factor < 0.95 ? " (ajustado para caber em 80% da receita)" : ""),
+    };
+  });
 }
 
 function buildFallbackSuggestions(
