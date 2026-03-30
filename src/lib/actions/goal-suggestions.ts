@@ -137,26 +137,42 @@ export async function getGoalSuggestions(): Promise<GoalSuggestionsResult> {
     };
   });
 
-  const prompt = `Você é um consultor financeiro pessoal. Analise as metas de despesas e sugira valores OTIMIZADOS para economizar.
+  const totalCurrentGoals = currentGoals.reduce((s, g) => s + g.value, 0);
+  const maxBudget = totalRevenue * 0.8;
 
-REGRAS OBRIGATÓRIAS:
-- O TOTAL de todas as metas sugeridas NÃO PODE ultrapassar 80% da receita (R$ ${(totalRevenue * 0.8).toFixed(2)})
-- NUNCA sugira um valor MAIOR que a meta atual se o gasto médio está ABAIXO ou PRÓXIMO da meta
-- Se o gasto médio está próximo da meta (±10%), MANTENHA o valor atual
-- Se o gasto médio está ABAIXO da meta, REDUZA a meta para a média + 10% de margem
-- Se o gasto médio está ACIMA da meta, MANTENHA a meta atual (o objetivo é o usuário reduzir gastos)
-- Se a tendência é de queda, reduza a meta acompanhando a tendência
+  const prompt = `Você é um consultor financeiro pessoal brasileiro. Seu objetivo é ajudar o usuário a ECONOMIZAR, nunca a gastar mais.
 
-Receita mensal: R$ ${totalRevenue.toFixed(2)}
-Teto máximo (80% receita): R$ ${(totalRevenue * 0.8).toFixed(2)}
-Período: ${currentPeriod.month}/${currentPeriod.year}
+CONTEXTO:
+- Receita mensal: R$ ${totalRevenue.toFixed(2)}
+- Teto máximo para soma de todas as metas: R$ ${maxBudget.toFixed(2)} (80% da receita)
+- Total das metas atuais: R$ ${totalCurrentGoals.toFixed(2)}
+- Período: ${currentPeriod.month}/${currentPeriod.year}
 
-Metas e histórico:
+DADOS (meta atual, média dos últimos 3 meses, tendência):
 ${JSON.stringify(goalsInfo, null, 2)}
 
-Responda APENAS com JSON:
+REGRAS INVIOLÁVEIS:
+1. A SOMA de todos os suggested_value NÃO PODE ultrapassar R$ ${maxBudget.toFixed(2)}
+2. NUNCA sugira um valor MAIOR que a meta atual — o objetivo é economizar, não gastar mais
+3. Se a média está ABAIXO da meta → REDUZA a meta (o usuário já gasta menos, a meta pode ser menor)
+4. Se a média está PRÓXIMA da meta (±10%) → MANTENHA o valor atual
+5. Se a média está ACIMA da meta → MANTENHA a meta (incentivar o usuário a reduzir)
+6. Se a tendência é de QUEDA → reduza a meta acompanhando a tendência de economia
+7. Gastos fixos (internet, plano de saúde, aluguel) devem ter meta = média arredondada pra cima (não faz sentido meta menor que o fixo)
+
+EXEMPLOS CORRETOS:
+- Internet: meta R$ 135, média R$ 134 → sugerir R$ 135 (gasto fixo, manter)
+- Restaurante: meta R$ 800, média R$ 520 → sugerir R$ 570 (gasta menos, reduzir meta)
+- Combustível: meta R$ 300, média R$ 350 → sugerir R$ 300 (acima da meta, manter pra reduzir)
+- Mercado: meta R$ 1200, média R$ 1180 → sugerir R$ 1200 (próximo, manter)
+
+EXEMPLOS INCORRETOS (NÃO FAÇA ISSO):
+- Internet: meta R$ 135, média R$ 134 → sugerir R$ 155 ❌ (aumentou sem motivo)
+- DAS: meta R$ 1196, média R$ 1181 → sugerir R$ 1359 ❌ (aumentou 14%, absurdo)
+
+Responda APENAS com JSON válido, sem explicação fora do JSON:
 [
-  {"subcategory": "nome", "suggested_value": 123.45, "reason": "Breve justificativa em português"}
+  {"subcategory": "nome exato", "suggested_value": 123.45, "reason": "Justificativa curta em português"}
 ]`;
 
   try {
@@ -230,17 +246,17 @@ function suggestValueForGoal(
     return { value: currentGoal, reason: "Meta adequada — gasto próximo do limite" };
   }
 
-  // Gasto bem abaixo da meta (< 90%) → reduzir meta pra média + 10% margem
+  // Gasto abaixo da meta (< 90%) → reduzir meta pra média + margem
   if (ratio < 0.9) {
-    const margin = trend === "up" ? 0.15 : 0.10;
+    const margin = trend === "up" ? 0.15 : trend === "down" ? 0.05 : 0.10;
     const suggested = Math.round(avg * (1 + margin) * 100) / 100;
-    // Nunca sugerir mais que a meta atual se o gasto está abaixo
+    // Nunca sugerir mais que a meta atual
     const final = Math.min(suggested, currentGoal);
     const reduction = Math.round((1 - final / currentGoal) * 100);
     return {
       value: final,
       reason: reduction > 0
-        ? `Gasto médio abaixo da meta — redução de ${reduction}%`
+        ? `Gasto médio abaixo da meta — possível redução de ${reduction}%`
         : "Meta adequada",
     };
   }
