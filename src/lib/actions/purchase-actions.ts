@@ -96,6 +96,9 @@ export async function createPurchase(data: FormData) {
     ? await getSubcategoryName(parsed.data.subcategory_id)
     : "";
 
+  // Auto-clear sample data when user creates real purchases
+  await Purchase.deleteMany({ family_id: familyId, is_sample: true });
+
   await Purchase.create({
     value: parsed.data.value,
     purchase_date: new Date(parsed.data.purchase_date + "T12:00:00"),

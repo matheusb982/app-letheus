@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db/connection";
 import { Goal, type IGoal } from "@/lib/db/models/goal";
 import { Category } from "@/lib/db/models/category";
+import { Purchase } from "@/lib/db/models/purchase";
+import { Period } from "@/lib/db/models/period";
 import { goalSchema } from "@/lib/validations/goals";
 import { getUserFamilyContext } from "@/lib/actions/family-helpers";
 
@@ -107,4 +109,31 @@ export async function deleteGoal(id: string) {
   await Goal.findByIdAndDelete(id);
   revalidatePath("/goals");
   revalidatePath("/dashboard");
+}
+
+export async function getGoalReadiness(): Promise<{
+  hasEnoughData: boolean;
+  periodsWithData: number;
+  minPeriodsNeeded: number;
+}> {
+  const { familyId } = await getUserFamilyContext();
+
+  // Find periods that have at least 1 purchase
+  const periods = await Period.find({ family_id: familyId }).lean();
+  let periodsWithData = 0;
+
+  for (const period of periods) {
+    const count = await Purchase.countDocuments({
+      period_id: period._id,
+      family_id: familyId,
+      is_sample: { $ne: true },
+    });
+    if (count > 0) periodsWithData++;
+  }
+
+  return {
+    hasEnoughData: periodsWithData >= 2,
+    periodsWithData,
+    minPeriodsNeeded: 2,
+  };
 }

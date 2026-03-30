@@ -10,6 +10,7 @@ export interface IUser extends Document {
   period_id?: mongoose.Types.ObjectId;
   family_id?: mongoose.Types.ObjectId;
   family_role?: "admin" | "member";
+  onboarding_completed?: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -25,6 +26,7 @@ const UserSchema = new Schema<IUser>(
     period_id: { type: Schema.Types.ObjectId, ref: "Period" },
     family_id: { type: Schema.Types.ObjectId, ref: "Family" },
     family_role: { type: String, enum: ["admin", "member"] },
+    onboarding_completed: { type: Boolean, default: false },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

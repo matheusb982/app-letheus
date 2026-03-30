@@ -9,6 +9,7 @@ export interface IPurchase extends Document {
   subcategory_id?: mongoose.Types.ObjectId;
   period_id?: mongoose.Types.ObjectId;
   family_id?: mongoose.Types.ObjectId;
+  is_sample?: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -27,6 +28,7 @@ const PurchaseSchema = new Schema<IPurchase>(
     subcategory_id: { type: Schema.Types.ObjectId },
     period_id: { type: Schema.Types.ObjectId, ref: "Period" },
     family_id: { type: Schema.Types.ObjectId, ref: "Family" },
+    is_sample: { type: Boolean },
   },
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },

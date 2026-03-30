@@ -33,9 +33,8 @@ export async function importCSV(
 ): Promise<ImportResult> {
   await connectDB();
 
-  // Detect format and parse
-  const { rows, format } = parseCSV(csvText);
-  const detectedType = format === "debito" ? "debit" as const : purchaseType;
+  // Detect format and parse (format = parser selection, NOT purchase type)
+  const { rows } = parseCSV(csvText);
 
   // Filter
   const validRows = rows.filter((row: ParsedRow) => row.value > 0 && !isIgnored(row.csv_description));
@@ -56,7 +55,7 @@ export async function importCSV(
   // Load existing fingerprints for dedup
   const existingPurchases = await Purchase.find({
     period_id: periodId,
-    purchase_type: detectedType,
+    purchase_type: purchaseType,
     ...(familyId ? { family_id: familyId } : {}),
   }).lean();
 
@@ -108,7 +107,7 @@ export async function importCSV(
       await Purchase.create({
         value: row.value,
         purchase_date: dateObj,
-        purchase_type: detectedType,
+        purchase_type: purchaseType,
         description,
         subcategory_id: subcatId || undefined,
         subcategory_name: subcatName,
