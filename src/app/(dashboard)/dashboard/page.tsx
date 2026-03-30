@@ -1,12 +1,17 @@
 import { getCurrentPeriod } from "@/lib/actions/period-actions";
 import { getDashboardData } from "@/lib/actions/dashboard-actions";
+import { hasSampleData } from "@/lib/actions/onboarding-actions";
 import { KPICards } from "@/components/dashboard/kpi-cards";
 import { CategoryTable } from "@/components/dashboard/category-table";
 import { GoalAlerts } from "@/components/dashboard/goal-alerts";
+import { SampleDataBanner } from "@/components/shared/sample-data-banner";
 
 export default async function DashboardPage() {
-  const period = await getCurrentPeriod();
-  const data = await getDashboardData();
+  const [period, data, showSampleBanner] = await Promise.all([
+    getCurrentPeriod(),
+    getDashboardData(),
+    hasSampleData(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -16,6 +21,8 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground mt-1">{period.label}</p>
         )}
       </div>
+
+      {showSampleBanner && <SampleDataBanner />}
 
       {data ? (
         <>

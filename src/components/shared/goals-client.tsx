@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Info } from "lucide-react";
 import { SubcategoryEntityForm } from "@/components/shared/subcategory-form";
 import { DeleteButton } from "@/components/shared/delete-button";
 import {
@@ -34,9 +34,11 @@ interface GoalsClientProps {
   goals: SerializedGoal[];
   subcategories: SerializedSubcategory[];
   periodLabel?: string;
+  hasEnoughData?: boolean;
+  periodsWithData?: number;
 }
 
-export function GoalsClient({ goals, subcategories, periodLabel }: GoalsClientProps) {
+export function GoalsClient({ goals, subcategories, periodLabel, hasEnoughData, periodsWithData }: GoalsClientProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SerializedGoal | undefined>();
@@ -75,10 +77,24 @@ export function GoalsClient({ goals, subcategories, periodLabel }: GoalsClientPr
         </div>
       </div>
 
+      {hasEnoughData === false && (
+        <div className="flex items-start gap-3 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+          <Info className="size-5 text-blue-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-sm">Sugestões automáticas ainda não disponíveis</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {periodsWithData === 0
+                ? "Precisamos de pelo menos 2 meses com despesas reais para sugerir metas personalizadas. Importe seus gastos e continue usando o app!"
+                : `Você tem ${periodsWithData} mês com dados. A IA precisa de pelo menos 2 meses de histórico para criar sugestões inteligentes. Continue importando seus gastos!`}
+            </p>
+          </div>
+        </div>
+      )}
+
       {!periodLabel ? (
         <p className="text-muted-foreground">Selecione um período.</p>
       ) : goals.length === 0 ? (
-        <p className="text-muted-foreground">Nenhuma meta encontrada.</p>
+        <p className="text-muted-foreground">Nenhuma meta encontrada. {hasEnoughData === false ? "As sugestões automáticas da IA serão ativadas quando você tiver pelo menos 2 meses de dados. Você ainda pode criar metas manualmente." : "Crie uma meta ou use as sugestões da IA."}</p>
       ) : (
         <>
           <div className="overflow-x-auto rounded-lg border">

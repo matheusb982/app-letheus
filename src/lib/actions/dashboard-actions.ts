@@ -8,7 +8,8 @@ import { Revenue, type IRevenue } from "@/lib/db/models/revenue";
 import { Goal, type IGoal } from "@/lib/db/models/goal";
 import { Patrimony, type IPatrimony } from "@/lib/db/models/patrimony";
 import { Period } from "@/lib/db/models/period";
-import { APORTE_SUBCATEGORY_IDS } from "@/lib/utils/constants";
+import { APORTE_SUBCATEGORY_IDS, APORTE_CATEGORY_NAME } from "@/lib/utils/constants";
+import { Category } from "@/lib/db/models/category";
 import { getPaymentsPerCategory } from "@/lib/services/payments-per-category";
 
 export interface DashboardKPIs {
@@ -87,10 +88,25 @@ export async function getDashboardData() {
 
   const totalRevenue = revenues.reduce((sum, r) => sum + r.value, 0);
   const totalPurchase = purchases.reduce((sum, p) => sum + p.value, 0);
+
+  // Resolve aporte IDs: try hardcoded first, fallback to category name
+  let aporteIds: string[] = [...APORTE_SUBCATEGORY_IDS];
+  const hasHardcodedMatch = purchases.some((p) =>
+    APORTE_SUBCATEGORY_IDS.includes(p.subcategory_id?.toString() as (typeof APORTE_SUBCATEGORY_IDS)[number])
+  );
+  if (!hasHardcodedMatch) {
+    const aporteCategory = await Category.findOne({
+      family_id: familyId,
+      name: APORTE_CATEGORY_NAME,
+      category_type: "patrimony",
+    });
+    if (aporteCategory) {
+      aporteIds = aporteCategory.subcategories.map((s) => s._id.toString());
+    }
+  }
+
   const totalAporte = purchases
-    .filter((p) =>
-      APORTE_SUBCATEGORY_IDS.includes(p.subcategory_id?.toString() as (typeof APORTE_SUBCATEGORY_IDS)[number])
-    )
+    .filter((p) => aporteIds.includes(p.subcategory_id?.toString() ?? ""))
     .reduce((sum, p) => sum + p.value, 0);
   const totalBalance = totalRevenue - totalPurchase;
   const totalGoal = goals.reduce((sum, g) => sum + g.value, 0);

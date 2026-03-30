@@ -1,8 +1,11 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getAllPeriods, getCurrentPeriod } from "@/lib/actions/period-actions";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { connectDB } from "@/lib/db/connection";
+import { User, type IUser } from "@/lib/db/models/user";
 
 export default async function DashboardLayout({
   children,
@@ -10,6 +13,17 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+
+  // Check onboarding status — only redirect users who explicitly have onboarding_completed === false
+  // Existing users (field doesn't exist in DB) return undefined with .lean(), so they skip this
+  if (session?.user?.id) {
+    await connectDB();
+    const dbUser = await User.findById(session.user.id).lean<IUser>();
+    if (dbUser && dbUser.onboarding_completed === false) {
+      redirect("/onboarding");
+    }
+  }
+
   const [periods, currentPeriod] = await Promise.all([
     getAllPeriods(),
     getCurrentPeriod(),

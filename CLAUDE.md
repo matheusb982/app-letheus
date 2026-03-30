@@ -132,9 +132,17 @@ npm run lint         # ESLint
 
 ## Variáveis de Ambiente
 
+### Produção
 ```
 MONGODB_URI=mongodb+srv://...
 GOOGLE_GENERATIVE_AI_API_KEY=...
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
+```
+
+### Ambiente Local (desenvolvimento)
+```
+MONGODB_URI=mongodb://localhost:27018/letheus
+NEXTAUTH_SECRET=dev-secret-key-for-local-testing-only
+NEXTAUTH_URL=http://localhost:3001
 ```
