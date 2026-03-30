@@ -7,8 +7,7 @@ import { Period, type IPeriod } from "@/lib/db/models/period";
 import { Goal, type IGoal } from "@/lib/db/models/goal";
 import { Purchase } from "@/lib/db/models/purchase";
 import { Revenue } from "@/lib/db/models/revenue";
-import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { generateTextWithFallback } from "@/lib/services/ai-provider";
 
 export interface GoalSuggestion {
   subcategory_name: string;
@@ -179,8 +178,7 @@ Responda APENAS com JSON válido, sem explicação fora do JSON:
 ]`;
 
   try {
-    const { text } = await generateText({
-      model: openai("gpt-4o"),
+    const { text } = await generateTextWithFallback("openai", {
       prompt,
       temperature: 0.3,
       maxOutputTokens: 4096,

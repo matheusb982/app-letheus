@@ -1,5 +1,4 @@
-import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { streamTextWithFallback } from "@/lib/services/ai-provider";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connection";
 import { User } from "@/lib/db/models/user";
@@ -133,12 +132,11 @@ ${financialContext}
 ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
   try {
-    const result = streamText({
-      model: openai("gpt-4o"),
+    const result = await streamTextWithFallback("openai", {
       system: systemPrompt,
       messages,
       maxOutputTokens: 4096,
-      async onFinish({ text }) {
+      async onFinish({ text }: { text: string }) {
         // Save conversation and cache
         await saveConversation(session!.user.id, familyId, chatSessionId, userMessage, text);
         await CachedResponse.create({

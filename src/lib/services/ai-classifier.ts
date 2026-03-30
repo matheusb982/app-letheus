@@ -1,5 +1,4 @@
-import { generateText } from "ai";
-import { google } from "@ai-sdk/google";
+import { generateTextWithFallback } from "./ai-provider";
 import { matchRules, getFewShotExamples } from "./classification-rules";
 
 interface SubcategoryOption {
@@ -91,11 +90,7 @@ Responda APENAS com um JSON no formato: {"0": "subcategory_id", "1": "subcategor
 Onde a chave é o índice da despesa e o valor é o ID da subcategoria correspondente.`;
 
   try {
-    const { text } = await generateText({
-      model: google("gemini-2.5-flash"),
-      providerOptions: {
-        google: { thinkingConfig: { thinkingBudget: 0 } },
-      },
+    const { text } = await generateTextWithFallback("google", {
       prompt,
       temperature: 0.1,
       maxOutputTokens: 4096,
