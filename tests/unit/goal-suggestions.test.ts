@@ -43,10 +43,12 @@ interface GoalSuggestion {
   reason: string;
 }
 
-function isFixedExpense(suggestion: GoalSuggestion): boolean {
+function isProtectedFromCap(suggestion: GoalSuggestion): boolean {
   if (suggestion.avg_3m === 0) return false;
   const ratio = suggestion.avg_3m / suggestion.suggested_value;
-  return ratio >= 0.85 && ratio <= 1.15;
+  if (ratio >= 0.85 && ratio <= 1.15) return true;
+  if (suggestion.avg_3m > suggestion.suggested_value) return true;
+  return false;
 }
 
 function capSuggestionsToRevenue(
@@ -60,8 +62,8 @@ function capSuggestionsToRevenue(
 
   if (currentTotal <= maxTotal) return suggestions;
 
-  const fixed = suggestions.filter((s) => isFixedExpense(s));
-  const variable = suggestions.filter((s) => !isFixedExpense(s));
+  const fixed = suggestions.filter((s) => isProtectedFromCap(s));
+  const variable = suggestions.filter((s) => !isProtectedFromCap(s));
 
   const fixedTotal = fixed.reduce((s, g) => s + g.suggested_value, 0);
   const variableTotal = variable.reduce((s, g) => s + g.suggested_value, 0);
@@ -73,7 +75,7 @@ function capSuggestionsToRevenue(
   const factor = variableBudget / variableTotal;
 
   return suggestions.map((s) => {
-    if (isFixedExpense(s)) return s;
+    if (isProtectedFromCap(s)) return s;
     return {
       ...s,
       suggested_value: Math.round(s.suggested_value * factor * 100) / 100,
@@ -141,21 +143,30 @@ describe("suggestValueForGoal", () => {
   });
 });
 
-describe("isFixedExpense", () => {
-  it("identifies Internet as fixed (avg ~= suggested)", () => {
-    expect(isFixedExpense({ subcategory_name: "Internet", suggested_value: 135, avg_3m: 134, reason: "" })).toBe(true);
+describe("isProtectedFromCap", () => {
+  it("protects Internet (fixed: avg ~= suggested)", () => {
+    expect(isProtectedFromCap({ subcategory_name: "Internet", suggested_value: 135, avg_3m: 134, reason: "" })).toBe(true);
   });
 
-  it("identifies DAS as fixed", () => {
-    expect(isFixedExpense({ subcategory_name: "DAS", suggested_value: 1196, avg_3m: 1181, reason: "" })).toBe(true);
+  it("protects DAS (fixed: avg ~= suggested)", () => {
+    expect(isProtectedFromCap({ subcategory_name: "DAS", suggested_value: 1196, avg_3m: 1181, reason: "" })).toBe(true);
   });
 
-  it("identifies Restaurante as variable (avg << suggested)", () => {
-    expect(isFixedExpense({ subcategory_name: "Restaurante", suggested_value: 800, avg_3m: 520, reason: "" })).toBe(false);
+  it("protects over-budget goals (avg > suggested)", () => {
+    // Refeição: avg R$766, meta R$600 — user is over budget, goal should stay
+    expect(isProtectedFromCap({ subcategory_name: "Refeição", suggested_value: 600, avg_3m: 766, reason: "" })).toBe(true);
   });
 
-  it("identifies zero avg as NOT fixed", () => {
-    expect(isFixedExpense({ subcategory_name: "Novo", suggested_value: 500, avg_3m: 0, reason: "" })).toBe(false);
+  it("protects Casa/Mesa/Banho when over budget", () => {
+    expect(isProtectedFromCap({ subcategory_name: "Casa, mesa e banho", suggested_value: 255, avg_3m: 425, reason: "" })).toBe(true);
+  });
+
+  it("does NOT protect Restaurante when avg is well below suggested", () => {
+    expect(isProtectedFromCap({ subcategory_name: "Restaurante", suggested_value: 800, avg_3m: 520, reason: "" })).toBe(false);
+  });
+
+  it("does NOT protect zero avg", () => {
+    expect(isProtectedFromCap({ subcategory_name: "Novo", suggested_value: 500, avg_3m: 0, reason: "" })).toBe(false);
   });
 });
 
@@ -207,6 +218,26 @@ describe("capSuggestionsToRevenue", () => {
     // Fixed expenses must be preserved
     expect(result[0].suggested_value).toBe(135);   // Internet
     expect(result[1].suggested_value).toBe(1196);  // DAS
+  });
+
+  it("does NOT reduce over-budget goals like Refeição (real bug case)", () => {
+    const suggestions: GoalSuggestion[] = [
+      // Over-budget: avg > suggested — goal is to incentivize reduction
+      { subcategory_name: "Refeição", suggested_value: 600, avg_3m: 766, reason: "test" },
+      { subcategory_name: "Casa, mesa e banho", suggested_value: 255, avg_3m: 425, reason: "test" },
+      // Variable: avg well below suggested — CAN be reduced
+      { subcategory_name: "Roupas", suggested_value: 3000, avg_3m: 1000, reason: "test" },
+      { subcategory_name: "Lazer", suggested_value: 3000, avg_3m: 1000, reason: "test" },
+    ];
+    const result = capSuggestionsToRevenue(suggestions, 5000);
+
+    // Over-budget goals must be preserved
+    expect(result[0].suggested_value).toBe(600);  // Refeição
+    expect(result[1].suggested_value).toBe(255);  // Casa, mesa e banho
+
+    // Variable should be reduced
+    expect(result[2].suggested_value).toBeLessThan(3000);
+    expect(result[3].suggested_value).toBeLessThan(3000);
   });
 
   it("handles zero revenue gracefully", () => {

@@ -266,11 +266,18 @@ function suggestValueForGoal(
   };
 }
 
-function isFixedExpense(suggestion: GoalSuggestion): boolean {
-  // A fixed expense has avg very close to the goal (±10%) — it's a bill, not discretionary
+function isProtectedFromCap(suggestion: GoalSuggestion): boolean {
   if (suggestion.avg_3m === 0) return false;
+
+  // Fixed expense: avg very close to suggested (±15%) — bills, subscriptions
   const ratio = suggestion.avg_3m / suggestion.suggested_value;
-  return ratio >= 0.85 && ratio <= 1.15;
+  if (ratio >= 0.85 && ratio <= 1.15) return true;
+
+  // Over-budget goal: avg is ABOVE suggested — goal exists to incentivize reduction
+  // Cutting it further would make it unrealistic
+  if (suggestion.avg_3m > suggestion.suggested_value) return true;
+
+  return false;
 }
 
 function capSuggestionsToRevenue(
@@ -284,24 +291,24 @@ function capSuggestionsToRevenue(
 
   if (currentTotal <= maxTotal) return suggestions;
 
-  // Separate fixed vs variable expenses
-  const fixed = suggestions.filter((s) => isFixedExpense(s));
-  const variable = suggestions.filter((s) => !isFixedExpense(s));
+  // Protected: fixed expenses + goals where user is already over budget
+  const protected_ = suggestions.filter((s) => isProtectedFromCap(s));
+  const reducible = suggestions.filter((s) => !isProtectedFromCap(s));
 
-  const fixedTotal = fixed.reduce((s, g) => s + g.suggested_value, 0);
-  const variableTotal = variable.reduce((s, g) => s + g.suggested_value, 0);
+  const protectedTotal = protected_.reduce((s, g) => s + g.suggested_value, 0);
+  const reducibleTotal = reducible.reduce((s, g) => s + g.suggested_value, 0);
 
-  // Budget remaining for variable expenses after fixed
-  const variableBudget = maxTotal - fixedTotal;
+  // Budget remaining for reducible expenses
+  const reducibleBudget = maxTotal - protectedTotal;
 
-  // If fixed alone exceeds budget, can't do much — return as is
-  if (variableBudget <= 0) return suggestions;
+  // If protected alone exceeds budget, can't do much — return as is
+  if (reducibleBudget <= 0) return suggestions;
 
-  // Only reduce variable expenses proportionally
-  const factor = variableBudget / variableTotal;
+  // Only reduce reducible expenses proportionally
+  const factor = reducibleBudget / reducibleTotal;
 
   return suggestions.map((s) => {
-    if (isFixedExpense(s)) return s; // Preserve fixed expenses
+    if (isProtectedFromCap(s)) return s;
     return {
       ...s,
       suggested_value: Math.round(s.suggested_value * factor * 100) / 100,
