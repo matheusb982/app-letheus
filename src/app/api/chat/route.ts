@@ -1,5 +1,5 @@
 import { streamText } from "ai";
-import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/db/connection";
 import { User } from "@/lib/db/models/user";
@@ -134,10 +134,7 @@ ${historyText ? `HISTÓRICO DA CONVERSA:\n${historyText}` : ""}`;
 
   try {
     const result = streamText({
-      model: google("gemini-2.5-flash"),
-      providerOptions: {
-        google: { thinkingConfig: { thinkingBudget: 2048 } },
-      },
+      model: openai("gpt-4o"),
       system: systemPrompt,
       messages,
       maxOutputTokens: 4096,

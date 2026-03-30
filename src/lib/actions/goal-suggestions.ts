@@ -8,7 +8,7 @@ import { Goal, type IGoal } from "@/lib/db/models/goal";
 import { Purchase } from "@/lib/db/models/purchase";
 import { Revenue } from "@/lib/db/models/revenue";
 import { generateText } from "ai";
-import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 
 export interface GoalSuggestion {
   subcategory_name: string;
@@ -177,10 +177,7 @@ Responda APENAS com JSON válido, sem explicação fora do JSON:
 
   try {
     const { text } = await generateText({
-      model: google("gemini-2.5-flash"),
-      providerOptions: {
-        google: { thinkingConfig: { thinkingBudget: 1024 } },
-      },
+      model: openai("gpt-4o"),
       prompt,
       temperature: 0.3,
       maxOutputTokens: 4096,
