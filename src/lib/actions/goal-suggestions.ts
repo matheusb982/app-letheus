@@ -137,23 +137,24 @@ export async function getGoalSuggestions(): Promise<GoalSuggestionsResult> {
     };
   });
 
-  const prompt = `Você é um consultor financeiro pessoal. Analise as metas de despesas do usuário e sugira valores otimizados.
+  const prompt = `Você é um consultor financeiro pessoal. Analise as metas de despesas e sugira valores OTIMIZADOS para economizar.
 
-Receita mensal atual: R$ ${totalRevenue.toFixed(2)}
-Período atual: ${currentPeriod.month}/${currentPeriod.year}
+REGRAS OBRIGATÓRIAS:
+- O TOTAL de todas as metas sugeridas NÃO PODE ultrapassar 80% da receita (R$ ${(totalRevenue * 0.8).toFixed(2)})
+- NUNCA sugira um valor MAIOR que a meta atual se o gasto médio está ABAIXO ou PRÓXIMO da meta
+- Se o gasto médio está próximo da meta (±10%), MANTENHA o valor atual
+- Se o gasto médio está ABAIXO da meta, REDUZA a meta para a média + 10% de margem
+- Se o gasto médio está ACIMA da meta, MANTENHA a meta atual (o objetivo é o usuário reduzir gastos)
+- Se a tendência é de queda, reduza a meta acompanhando a tendência
 
-Metas atuais e histórico de gastos dos últimos 3 meses:
+Receita mensal: R$ ${totalRevenue.toFixed(2)}
+Teto máximo (80% receita): R$ ${(totalRevenue * 0.8).toFixed(2)}
+Período: ${currentPeriod.month}/${currentPeriod.year}
+
+Metas e histórico:
 ${JSON.stringify(goalsInfo, null, 2)}
 
-Para cada meta, sugira um valor otimizado considerando:
-1. Se o gasto médio está muito abaixo da meta, considere reduzir a meta (mas com margem de segurança de ~15-20%)
-2. Se o gasto médio está acima da meta, considere aumentar a meta para ser realista OU manter se o objetivo é reduzir gastos
-3. Se a tendência é de alta, considere uma meta levemente maior
-4. Se a tendência é de baixa, considere reduzir a meta
-5. Considere que o total das metas não deve ultrapassar 80% da receita mensal
-6. Se a meta já está boa (gasto próximo da meta ±10%), mantenha o valor atual
-
-Responda APENAS com JSON no formato:
+Responda APENAS com JSON:
 [
   {"subcategory": "nome", "suggested_value": 123.45, "reason": "Breve justificativa em português"}
 ]`;
@@ -200,15 +201,75 @@ Responda APENAS com JSON no formato:
       };
     });
 
+    const capped = capSuggestionsToRevenue(suggestions, totalRevenue);
+
     return {
-      suggestions,
+      suggestions: capped,
       total_revenue: totalRevenue,
       total_current_goals: currentGoals.reduce((s, g) => s + g.value, 0),
-      total_suggested: suggestions.reduce((s, g) => s + g.suggested_value, 0),
+      total_suggested: capped.reduce((s, g) => s + g.suggested_value, 0),
     };
   } catch {
     return buildFallbackSuggestions(currentGoals, spendingData, totalRevenue);
   }
+}
+
+function suggestValueForGoal(
+  currentGoal: number,
+  avg: number,
+  trend: "up" | "down" | "stable"
+): { value: number; reason: string } {
+  if (avg === 0) {
+    return { value: currentGoal, reason: "Sem histórico de gastos" };
+  }
+
+  const ratio = avg / currentGoal;
+
+  // Gasto próximo da meta (±10%) → manter
+  if (ratio >= 0.9 && ratio <= 1.1) {
+    return { value: currentGoal, reason: "Meta adequada — gasto próximo do limite" };
+  }
+
+  // Gasto bem abaixo da meta (< 90%) → reduzir meta pra média + 10% margem
+  if (ratio < 0.9) {
+    const margin = trend === "up" ? 0.15 : 0.10;
+    const suggested = Math.round(avg * (1 + margin) * 100) / 100;
+    // Nunca sugerir mais que a meta atual se o gasto está abaixo
+    const final = Math.min(suggested, currentGoal);
+    const reduction = Math.round((1 - final / currentGoal) * 100);
+    return {
+      value: final,
+      reason: reduction > 0
+        ? `Gasto médio abaixo da meta — redução de ${reduction}%`
+        : "Meta adequada",
+    };
+  }
+
+  // Gasto acima da meta (> 110%) → manter meta (objetivo é reduzir gastos)
+  return {
+    value: currentGoal,
+    reason: "Gasto acima da meta — mantendo limite para incentivar redução",
+  };
+}
+
+function capSuggestionsToRevenue(
+  suggestions: GoalSuggestion[],
+  totalRevenue: number
+): GoalSuggestion[] {
+  if (totalRevenue <= 0) return suggestions;
+
+  const maxTotal = totalRevenue * 0.8;
+  const currentTotal = suggestions.reduce((s, g) => s + g.suggested_value, 0);
+
+  if (currentTotal <= maxTotal) return suggestions;
+
+  // Reduzir proporcionalmente
+  const factor = maxTotal / currentTotal;
+  return suggestions.map((s) => ({
+    ...s,
+    suggested_value: Math.round(s.suggested_value * factor * 100) / 100,
+    reason: s.reason + (factor < 0.95 ? " (ajustado para caber em 80% da receita)" : ""),
+  }));
 }
 
 function buildFallbackSuggestions(
@@ -219,24 +280,28 @@ function buildFallbackSuggestions(
   const suggestions: GoalSuggestion[] = goals.map((goal) => {
     const sp = spending.find((s) => s.subcategory_id === goal.subcategory_id?.toString());
     const avg = sp?.avg ?? 0;
-    const suggested = avg > 0 ? Math.round(avg * 1.15 * 100) / 100 : goal.value;
+    const trend = sp?.trend ?? "stable";
+    const { value, reason } = suggestValueForGoal(goal.value, avg, trend);
+
     return {
       subcategory_name: goal.subcategory_name ?? "",
       subcategory_id: goal.subcategory_id?.toString() ?? "",
       goal_id: goal._id.toString(),
       current_value: goal.value,
-      suggested_value: suggested,
+      suggested_value: value,
       avg_3m: avg,
-      trend: sp?.trend ?? "stable",
-      reason: avg > 0 ? "Baseado na média + 15% margem" : "Sem histórico",
+      trend,
+      reason,
     };
   });
 
+  const capped = capSuggestionsToRevenue(suggestions, totalRevenue);
+
   return {
-    suggestions,
+    suggestions: capped,
     total_revenue: totalRevenue,
     total_current_goals: goals.reduce((s, g) => s + g.value, 0),
-    total_suggested: suggestions.reduce((s, g) => s + g.suggested_value, 0),
+    total_suggested: capped.reduce((s, g) => s + g.suggested_value, 0),
   };
 }
 
