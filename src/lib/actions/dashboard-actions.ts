@@ -101,7 +101,7 @@ export async function getDashboardData() {
       category_type: "patrimony",
     });
     if (aporteCategory) {
-      aporteIds = aporteCategory.subcategories.map((s) => s._id.toString());
+      aporteIds = aporteCategory.subcategories.map((s: { _id: { toString(): string } }) => s._id.toString());
     }
   }
 

@@ -16,7 +16,6 @@ import {
   ArrowRight,
   FileText,
   ClipboardPaste,
-  PieChart,
   ChevronRight,
   ChevronLeft,
   CheckCircle2,
