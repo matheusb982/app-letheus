@@ -12,6 +12,7 @@ import {
   FolderTree,
   MessageCircle,
   Users,
+  UserCog,
   LogOut,
   TrendingUp,
 } from "lucide-react";
@@ -148,12 +149,24 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname.startsWith("/admin")}
+                    isActive={pathname.startsWith("/admin/families")}
                     tooltip="Famílias"
                   >
                     <Link href="/admin/families">
                       <Users />
                       <span>Famílias</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith("/admin/users")}
+                    tooltip="Usuários"
+                  >
+                    <Link href="/admin/users">
+                      <UserCog />
+                      <span>Usuários</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
