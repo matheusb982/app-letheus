@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/lib/actions/sign-out-action";
 import { isAdmin as checkIsAdmin } from "@/lib/actions/admin-actions";
+import { isFamilyOwner as checkIsFamilyOwner } from "@/lib/actions/family-member-actions";
 import {
   Sidebar,
   SidebarContent,
@@ -56,9 +57,15 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const pathname = usePathname();
   const [admin, setAdmin] = useState(false);
+  const [familyOwner, setFamilyOwner] = useState(false);
 
   useEffect(() => {
-    checkIsAdmin().then(setAdmin);
+    Promise.all([checkIsAdmin(), checkIsFamilyOwner()]).then(
+      ([isAdm, isOwner]) => {
+        setAdmin(isAdm);
+        setFamilyOwner(isOwner);
+      }
+    );
   }, []);
 
   const initials = user.name
@@ -112,6 +119,27 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {familyOwner && !admin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Família</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/family"}
+                    tooltip="Família"
+                  >
+                    <Link href="/family">
+                      <Users />
+                      <span>Gerenciar Família</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {admin && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupLabel>Admin</SidebarGroupLabel>

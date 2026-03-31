@@ -15,6 +15,9 @@ App de gestão financeira pessoal com IA, construído com Next.js 15, shadcn/ui 
 - **Self-registration** com criação automática de família e categorias
 - **Autenticação** com NextAuth v5 (compatível com Devise/Rails)
 - **Multi-tenancy** por família — dados isolados por tenant
+- **Gestão de família** — owner pode adicionar/remover membros (limite 3)
+- **Exclusão de conta/família** com anonimização (LGPD)
+- **Audit log** de todas as ações de gestão de membros
 - **Fallback automático entre provedores de IA** (OpenAI ↔ Gemini)
 
 ## Stack

@@ -30,6 +30,7 @@ src/
 │   │   ├── patrimonies/  # CRUD + gráfico anual
 │   │   ├── categories/   # CRUD com subcategorias inline
 │   │   ├── chat/         # Assistente IA com streaming
+│   │   ├── family/       # Gestão da família pelo owner (membros, exclusão)
 │   │   └── admin/        # Gestão de usuários e famílias (super admin)
 │   ├── onboarding/       # Wizard de onboarding (5 etapas)
 │   └── api/
@@ -44,6 +45,7 @@ src/
 │   ├── charts/           # annual-line-chart
 │   ├── chat/             # chat-client
 │   ├── admin/            # admin-families-client, admin-family-members-client, admin-users-client
+│   ├── family/           # family-management-client (gestão de membros + exclusão)
 │   ├── onboarding/       # onboarding-wizard (wizard multi-step)
 │   └── shared/           # delete-button, submit-button, subcategory-form, revenue-form, loading
 ├── lib/
@@ -51,7 +53,7 @@ src/
 │   ├── auth.config.ts    # Middleware auth config
 │   ├── db/
 │   │   ├── connection.ts # Mongoose singleton
-│   │   └── models/       # 12 models (inclui Family)
+│   │   └── models/       # 13 models (inclui Family, AuditLog)
 │   ├── actions/          # Server Actions (CRUD, dashboard, chart, chat, import, period, family, onboarding)
 │   ├── services/         # Lógica de negócio (csv-import, text-import, ai-classifier, ai-provider, payments-per-category)
 │   ├── validations/      # Zod schemas por entidade
@@ -92,6 +94,11 @@ npm run lint         # ESLint
 - Self-registration habilitado via landing page (`/register`)
 - No registro: cria família automaticamente ("Família {nome}"), clona categorias globais, redireciona ao onboarding
 - Super admin (`ADMIN_EMAIL`) pode criar famílias e membros via `/admin/families`
+- Family owner gerencia membros via `/family` (limite de 3 membros)
+- Owner pode editar nome da família, adicionar/remover membros
+- Exclusão de conta: membro é anonimizado (LGPD), owner deve remover membros ou excluir família primeiro
+- Exclusão de família: deleta todos os dados financeiros, membros e a família (irreversível)
+- AuditLog registra todas as ações de gestão de membros
 - Scripts: `npx tsx scripts/migrate-family.ts`, `npx tsx scripts/seed-global-categories.ts`
 
 ### Auth
