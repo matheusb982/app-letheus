@@ -5,6 +5,7 @@ import { importText } from "@/lib/services/text-import";
 import { revalidatePath } from "next/cache";
 import { Purchase } from "@/lib/db/models/purchase";
 import { getUserFamilyContext } from "@/lib/actions/family-helpers";
+import { requireActiveSubscription } from "@/lib/actions/subscription-helpers";
 
 async function getUserContext(): Promise<{ periodId: string; userId: string; familyId: string }> {
   const ctx = await getUserFamilyContext();
@@ -12,6 +13,7 @@ async function getUserContext(): Promise<{ periodId: string; userId: string; fam
 }
 
 export async function importCSVAction(formData: FormData) {
+  await requireActiveSubscription();
   const { periodId, userId, familyId } = await getUserContext();
   const file = formData.get("file") as File;
   if (!file || file.size === 0) {
@@ -30,6 +32,7 @@ export async function importCSVAction(formData: FormData) {
 }
 
 export async function importTextAction(formData: FormData) {
+  await requireActiveSubscription();
   const { periodId, userId, familyId } = await getUserContext();
   const text = formData.get("text") as string;
   if (!text?.trim()) {

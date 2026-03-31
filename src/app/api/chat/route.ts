@@ -10,7 +10,7 @@ import { ChatMessage } from "@/lib/db/models/chat-message";
 import { ChatSession } from "@/lib/db/models/chat-session";
 import { CachedResponse, type ICachedResponse } from "@/lib/db/models/cached-response";
 import { Period, type IPeriod } from "@/lib/db/models/period";
-import { DAILY_CHAT_LIMIT } from "@/lib/utils/constants";
+import { DAILY_CHAT_LIMIT, ADMIN_EMAIL } from "@/lib/utils/constants";
 import { MONTH_NAMES } from "@/lib/utils/months";
 import { createHash } from "crypto";
 
@@ -21,6 +21,22 @@ export async function POST(req: Request) {
   }
 
   await connectDB();
+
+  // Check subscription (skip for admin)
+  const chatUser = await User.findById(session.user.id);
+  if (chatUser?.family_id && session.user.email !== ADMIN_EMAIL) {
+    const { Family } = await import("@/lib/db/models/family");
+    const family = await Family.findById(chatUser.family_id);
+    if (family) {
+      const status = family.subscription_status ?? "trialing";
+      const trialEndsAt = family.trial_ends_at;
+      const isExpired = status === "expired" || status === "canceled" ||
+        (status === "trialing" && trialEndsAt && new Date() > trialEndsAt);
+      if (isExpired) {
+        return new Response("Seu período de teste expirou. Assine para continuar usando o chat.", { status: 403 });
+      }
+    }
+  }
   const body = await req.json();
   const { messages, chatSessionId } = body;
   // AI SDK v6: content may be in parts, not content field

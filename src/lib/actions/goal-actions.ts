@@ -8,6 +8,7 @@ import { Purchase } from "@/lib/db/models/purchase";
 import { Period } from "@/lib/db/models/period";
 import { goalSchema } from "@/lib/validations/goals";
 import { getUserFamilyContext } from "@/lib/actions/family-helpers";
+import { requireActiveSubscription } from "@/lib/actions/subscription-helpers";
 
 export interface SerializedGoal {
   id: string;
@@ -51,6 +52,7 @@ export async function getGoalById(id: string): Promise<SerializedGoal | null> {
 }
 
 export async function createGoal(data: FormData) {
+  await requireActiveSubscription();
   const { familyId, periodId } = await getUserFamilyContext();
 
   const raw = {
@@ -79,6 +81,7 @@ export async function createGoal(data: FormData) {
 }
 
 export async function updateGoal(id: string, data: FormData) {
+  await requireActiveSubscription();
   await connectDB();
 
   const raw = {
@@ -105,6 +108,7 @@ export async function updateGoal(id: string, data: FormData) {
 }
 
 export async function deleteGoal(id: string) {
+  await requireActiveSubscription();
   await connectDB();
   await Goal.findByIdAndDelete(id);
   revalidatePath("/goals");

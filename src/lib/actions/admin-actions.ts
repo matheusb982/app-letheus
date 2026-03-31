@@ -5,12 +5,17 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db/connection";
 import { auth } from "@/lib/auth";
 import { User, type IUser } from "@/lib/db/models/user";
+import { Family, type IFamily, type SubscriptionStatus } from "@/lib/db/models/family";
 import { ADMIN_EMAIL } from "@/lib/utils/constants";
 
 export interface SerializedUser {
   id: string;
   fullname: string;
   email: string;
+  family_name: string | null;
+  family_id: string | null;
+  subscription_status: SubscriptionStatus;
+  trial_ends_at: string | null;
   created_at: string;
 }
 
@@ -31,12 +36,23 @@ export async function getUsers(): Promise<SerializedUser[]> {
   await requireAdmin();
   await connectDB();
   const users = await User.find().sort({ created_at: -1 }).lean<IUser[]>();
-  return users.map((u) => ({
-    id: u._id.toString(),
-    fullname: u.fullname || "",
-    email: u.email,
-    created_at: u.created_at.toISOString().split("T")[0],
-  }));
+  const familyIds = users.map((u) => u.family_id).filter(Boolean);
+  const families = await Family.find({ _id: { $in: familyIds } }).lean<IFamily[]>();
+  const familyMap = new Map(families.map((f) => [f._id.toString(), f]));
+
+  return users.map((u) => {
+    const family = u.family_id ? familyMap.get(u.family_id.toString()) : null;
+    return {
+      id: u._id.toString(),
+      fullname: u.fullname || "",
+      email: u.email,
+      family_name: family?.name ?? null,
+      family_id: u.family_id?.toString() ?? null,
+      subscription_status: (family?.subscription_status ?? "trialing") as SubscriptionStatus,
+      trial_ends_at: family?.trial_ends_at ? family.trial_ends_at.toISOString() : null,
+      created_at: u.created_at.toISOString().split("T")[0],
+    };
+  });
 }
 
 export async function createUser(data: FormData) {
@@ -110,6 +126,65 @@ export async function deleteUser(id: string) {
   }
 
   await User.findByIdAndDelete(id);
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+export async function activateSubscription(familyId: string) {
+  await requireAdmin();
+  await connectDB();
+
+  await Family.findByIdAndUpdate(familyId, {
+    subscription_status: "active",
+    trial_ends_at: null,
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+export async function extendTrial(familyId: string, days: number) {
+  await requireAdmin();
+  await connectDB();
+
+  const family = await Family.findById(familyId);
+  if (!family) return { error: "Família não encontrada" };
+
+  const baseDate = family.trial_ends_at && new Date(family.trial_ends_at) > new Date()
+    ? new Date(family.trial_ends_at)
+    : new Date();
+
+  baseDate.setDate(baseDate.getDate() + days);
+
+  await Family.findByIdAndUpdate(familyId, {
+    subscription_status: "trialing",
+    trial_ends_at: baseDate,
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+export async function cancelSubscription(familyId: string) {
+  await requireAdmin();
+  await connectDB();
+
+  await Family.findByIdAndUpdate(familyId, {
+    subscription_status: "canceled",
+  });
+
+  revalidatePath("/admin/users");
+  return { success: true };
+}
+
+export async function expireSubscription(familyId: string) {
+  await requireAdmin();
+  await connectDB();
+
+  await Family.findByIdAndUpdate(familyId, {
+    subscription_status: "expired",
+  });
+
   revalidatePath("/admin/users");
   return { success: true };
 }

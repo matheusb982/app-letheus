@@ -7,6 +7,7 @@ import { ChatMessage, type IChatMessage } from "@/lib/db/models/chat-message";
 import { revalidatePath } from "next/cache";
 import { DAILY_CHAT_LIMIT } from "@/lib/utils/constants";
 import { getUserFamilyId } from "@/lib/actions/family-helpers";
+import { requireActiveSubscription } from "@/lib/actions/subscription-helpers";
 
 export interface SerializedChatSession {
   id: string;
@@ -60,6 +61,7 @@ export async function getChatMessages(sessionId: string): Promise<SerializedChat
 }
 
 export async function createChatSession(): Promise<string> {
+  await requireActiveSubscription();
   const session = await auth();
   if (!session) throw new Error("Não autorizado");
 

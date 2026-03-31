@@ -80,9 +80,14 @@ export async function registerAction(
 
   // Create family (user's first name as family name)
   const familyName = parsed.data.fullname.split(" ")[0] || "Minha Família";
+  const trialEndsAt = new Date();
+  trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
   const family = await Family.create({
     name: `Família ${familyName}`,
     owner_id: user._id,
+    subscription_status: "trialing",
+    trial_ends_at: trialEndsAt,
   });
 
   // Link user to family

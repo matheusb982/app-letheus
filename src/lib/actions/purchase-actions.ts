@@ -8,6 +8,7 @@ import { Category } from "@/lib/db/models/category";
 import { saveClassificationRule } from "@/lib/services/classification-rules";
 import { purchaseSchema } from "@/lib/validations/purchases";
 import { getUserFamilyContext } from "@/lib/actions/family-helpers";
+import { requireActiveSubscription } from "@/lib/actions/subscription-helpers";
 function formatDateBR(date: Date): string {
   const parts = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -77,6 +78,7 @@ async function getSubcategoryName(subcategoryId: string): Promise<string> {
 }
 
 export async function createPurchase(data: FormData) {
+  await requireActiveSubscription();
   const { familyId, periodId } = await getUserFamilyContext();
 
   const raw = {
@@ -116,6 +118,7 @@ export async function createPurchase(data: FormData) {
 }
 
 export async function updatePurchase(id: string, data: FormData) {
+  await requireActiveSubscription();
   await connectDB();
   const { familyId } = await getUserFamilyContext();
 
@@ -170,6 +173,7 @@ export async function updatePurchase(id: string, data: FormData) {
 }
 
 export async function deletePurchase(id: string) {
+  await requireActiveSubscription();
   await connectDB();
   await Purchase.findByIdAndDelete(id);
   revalidatePath("/purchases");

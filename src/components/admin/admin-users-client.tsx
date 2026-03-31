@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,12 +28,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, MoreHorizontal, CheckCircle, Clock, XCircle, CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 import {
   createUser,
   updateUser,
   deleteUser,
+  activateSubscription,
+  extendTrial,
+  cancelSubscription,
+  expireSubscription,
   type SerializedUser,
 } from "@/lib/actions/admin-actions";
 
@@ -33,11 +45,39 @@ interface Props {
   users: SerializedUser[];
 }
 
+function SubscriptionBadge({ status }: { status: string }) {
+  switch (status) {
+    case "active":
+      return <Badge className="bg-green-600">Ativo</Badge>;
+    case "trialing":
+      return <Badge className="bg-blue-600">Trial</Badge>;
+    case "expired":
+      return <Badge variant="destructive">Expirado</Badge>;
+    case "canceled":
+      return <Badge variant="secondary">Cancelado</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
+}
+
+function formatTrialEnd(trialEndsAt: string | null): string {
+  if (!trialEndsAt) return "—";
+  const date = new Date(trialEndsAt);
+  const now = new Date();
+  const days = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const formatted = date.toLocaleDateString("pt-BR");
+  if (days < 0) return `${formatted} (expirado)`;
+  if (days === 0) return `${formatted} (hoje)`;
+  if (days === 1) return `${formatted} (1 dia)`;
+  return `${formatted} (${days} dias)`;
+}
+
 export function AdminUsersClient({ users }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<SerializedUser | null>(null);
+  const [extendOpen, setExtendOpen] = useState<string | null>(null);
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -74,6 +114,55 @@ export function AdminUsersClient({ users }: Props) {
         toast.error(result.error);
       } else {
         toast.success("Usuário excluído");
+        router.refresh();
+      }
+    });
+  }
+
+  async function handleActivate(familyId: string | null) {
+    if (!familyId) return toast.error("Usuário sem família");
+    startTransition(async () => {
+      const result = await activateSubscription(familyId);
+      if (result.success) {
+        toast.success("Assinatura ativada");
+        router.refresh();
+      }
+    });
+  }
+
+  async function handleExtendTrial(familyId: string | null, days: number) {
+    if (!familyId) return toast.error("Usuário sem família");
+    startTransition(async () => {
+      const result = await extendTrial(familyId, days);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Trial estendido em ${days} dias`);
+        setExtendOpen(null);
+        router.refresh();
+      }
+    });
+  }
+
+  async function handleCancel(familyId: string | null) {
+    if (!familyId) return toast.error("Usuário sem família");
+    if (!confirm("Cancelar assinatura desta família?")) return;
+    startTransition(async () => {
+      const result = await cancelSubscription(familyId);
+      if (result.success) {
+        toast.success("Assinatura cancelada");
+        router.refresh();
+      }
+    });
+  }
+
+  async function handleExpire(familyId: string | null) {
+    if (!familyId) return toast.error("Usuário sem família");
+    if (!confirm("Expirar assinatura desta família?")) return;
+    startTransition(async () => {
+      const result = await expireSubscription(familyId);
+      if (result.success) {
+        toast.success("Assinatura expirada");
         router.refresh();
       }
     });
@@ -125,6 +214,9 @@ export function AdminUsersClient({ users }: Props) {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Família</TableHead>
+              <TableHead>Assinatura</TableHead>
+              <TableHead>Trial até</TableHead>
               <TableHead>Criado em</TableHead>
               <TableHead className="w-[100px]">Ações</TableHead>
             </TableRow>
@@ -134,33 +226,61 @@ export function AdminUsersClient({ users }: Props) {
               <TableRow key={user.id}>
                 <TableCell>{user.fullname || "—"}</TableCell>
                 <TableCell>{user.email}</TableCell>
+                <TableCell className="text-sm">{user.family_name || "—"}</TableCell>
+                <TableCell>
+                  <SubscriptionBadge status={user.subscription_status} />
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {user.subscription_status === "trialing"
+                    ? formatTrialEnd(user.trial_ends_at)
+                    : "—"}
+                </TableCell>
                 <TableCell>{user.created_at}</TableCell>
                 <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setEditUser(user)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(user.id)}
-                      disabled={isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditUser(user)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleActivate(user.family_id)} disabled={!user.family_id}>
+                        <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                        Ativar assinatura
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setExtendOpen(user.family_id)} disabled={!user.family_id}>
+                        <CalendarPlus className="mr-2 h-4 w-4 text-blue-600" />
+                        Estender trial
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExpire(user.family_id)} disabled={!user.family_id}>
+                        <Clock className="mr-2 h-4 w-4 text-amber-600" />
+                        Expirar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleCancel(user.family_id)} disabled={!user.family_id}>
+                        <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                        Cancelar assinatura
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(user.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir usuário
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
             {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   Nenhum usuário cadastrado
                 </TableCell>
               </TableRow>
@@ -216,6 +336,32 @@ export function AdminUsersClient({ users }: Props) {
               </div>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Extend Trial Dialog */}
+      <Dialog open={!!extendOpen} onOpenChange={(open) => !open && setExtendOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Estender Trial</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Quantos dias deseja adicionar ao trial?
+            </p>
+            <div className="flex gap-2">
+              {[7, 14, 30].map((days) => (
+                <Button
+                  key={days}
+                  variant="outline"
+                  onClick={() => extendOpen && handleExtendTrial(extendOpen, days)}
+                  disabled={isPending}
+                >
+                  +{days} dias
+                </Button>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
