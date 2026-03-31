@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 interface DeleteButtonProps {
-  action: () => Promise<void>;
+  action: () => Promise<void | { error?: string }>;
   size?: "default" | "sm" | "icon";
 }
 
@@ -19,7 +20,12 @@ export function DeleteButton({ action, size = "icon" }: DeleteButtonProps) {
       disabled={isPending}
       onClick={() => {
         if (confirm("Tem certeza que deseja excluir?")) {
-          startTransition(() => action());
+          startTransition(async () => {
+            const result = await action();
+            if (result && "error" in result && result.error) {
+              toast.error(result.error);
+            }
+          });
         }
       }}
     >

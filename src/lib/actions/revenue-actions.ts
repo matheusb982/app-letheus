@@ -5,7 +5,7 @@ import { connectDB } from "@/lib/db/connection";
 import { Revenue, type IRevenue } from "@/lib/db/models/revenue";
 import { revenueSchema } from "@/lib/validations/revenues";
 import { getUserFamilyContext } from "@/lib/actions/family-helpers";
-import { requireActiveSubscription } from "@/lib/actions/subscription-helpers";
+import { checkSubscriptionActive } from "@/lib/actions/subscription-helpers";
 
 export interface SerializedRevenue {
   id: string;
@@ -42,7 +42,8 @@ export async function getRevenueById(id: string): Promise<SerializedRevenue | nu
 }
 
 export async function createRevenue(data: FormData) {
-  await requireActiveSubscription();
+  const blocked = await checkSubscriptionActive();
+  if (blocked) return { error: blocked };
   const { familyId, periodId } = await getUserFamilyContext();
 
   const raw = {
@@ -70,7 +71,8 @@ export async function createRevenue(data: FormData) {
 }
 
 export async function updateRevenue(id: string, data: FormData) {
-  await requireActiveSubscription();
+  const blocked = await checkSubscriptionActive();
+  if (blocked) return { error: blocked };
   await connectDB();
 
   const raw = {
@@ -96,7 +98,8 @@ export async function updateRevenue(id: string, data: FormData) {
 }
 
 export async function deleteRevenue(id: string) {
-  await requireActiveSubscription();
+  const blocked = await checkSubscriptionActive();
+  if (blocked) return { error: blocked };
   await connectDB();
   await Revenue.findByIdAndDelete(id);
   revalidatePath("/revenues");

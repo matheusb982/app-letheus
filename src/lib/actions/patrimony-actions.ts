@@ -6,7 +6,7 @@ import { Patrimony, type IPatrimony } from "@/lib/db/models/patrimony";
 import { Category } from "@/lib/db/models/category";
 import { patrimonySchema } from "@/lib/validations/patrimonies";
 import { getUserFamilyContext } from "@/lib/actions/family-helpers";
-import { requireActiveSubscription } from "@/lib/actions/subscription-helpers";
+import { checkSubscriptionActive } from "@/lib/actions/subscription-helpers";
 
 export interface SerializedPatrimony {
   id: string;
@@ -50,7 +50,8 @@ export async function getPatrimonyById(id: string): Promise<SerializedPatrimony 
 }
 
 export async function createPatrimony(data: FormData) {
-  await requireActiveSubscription();
+  const blocked = await checkSubscriptionActive();
+  if (blocked) return { error: blocked };
   const { familyId, periodId } = await getUserFamilyContext();
 
   const raw = {
@@ -79,7 +80,8 @@ export async function createPatrimony(data: FormData) {
 }
 
 export async function updatePatrimony(id: string, data: FormData) {
-  await requireActiveSubscription();
+  const blocked = await checkSubscriptionActive();
+  if (blocked) return { error: blocked };
   await connectDB();
 
   const raw = {
@@ -106,7 +108,8 @@ export async function updatePatrimony(id: string, data: FormData) {
 }
 
 export async function deletePatrimony(id: string) {
-  await requireActiveSubscription();
+  const blocked = await checkSubscriptionActive();
+  if (blocked) return { error: blocked };
   await connectDB();
   await Patrimony.findByIdAndDelete(id);
   revalidatePath("/patrimonies");

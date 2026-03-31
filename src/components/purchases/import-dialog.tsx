@@ -39,6 +39,10 @@ export function ImportDialog() {
   function handleCSVSubmit(formData: FormData) {
     startTransition(async () => {
       const res = await importCSVAction(formData);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
       setResult(res);
       if (res.created > 0) {
         toast.success(`${res.created} despesas importadas!`);
@@ -51,6 +55,10 @@ export function ImportDialog() {
   function handleTextSubmit(formData: FormData) {
     startTransition(async () => {
       const res = await importTextAction(formData);
+      if ("error" in res) {
+        toast.error(res.error);
+        return;
+      }
       setResult(res);
       if (res.created > 0) {
         toast.success(`${res.created} despesas importadas!`);

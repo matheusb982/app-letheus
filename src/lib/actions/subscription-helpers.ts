@@ -50,13 +50,23 @@ export async function getSubscriptionInfo(): Promise<SubscriptionInfo> {
 /**
  * Guard for server actions that require an active subscription.
  * Admin is never blocked.
+ * Returns null if active, or an error string if blocked.
  */
-export async function requireActiveSubscription(): Promise<void> {
+export async function checkSubscriptionActive(): Promise<string | null> {
   const session = await auth();
-  if (session?.user?.email === ADMIN_EMAIL) return;
+  if (session?.user?.email === ADMIN_EMAIL) return null;
 
   const info = await getSubscriptionInfo();
   if (!info.isActive) {
-    throw new Error("Seu período de teste expirou. Assine para continuar usando todas as funcionalidades.");
+    return "Seu período de teste expirou. Assine para continuar usando todas as funcionalidades.";
   }
+  return null;
+}
+
+/**
+ * @deprecated Use checkSubscriptionActive() instead for proper error handling.
+ */
+export async function requireActiveSubscription(): Promise<void> {
+  const blocked = await checkSubscriptionActive();
+  if (blocked) throw new Error(blocked);
 }
