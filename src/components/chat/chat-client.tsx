@@ -214,9 +214,13 @@ export function ChatClient({
 
   async function handleNewSession() {
     startTransition(async () => {
-      const id = await createChatSession();
+      const result = await createChatSession();
+      if (typeof result === "object" && "error" in result) {
+        toast.error(result.error);
+        return;
+      }
       setSheetOpen(false);
-      router.push(`/chat/${id}`);
+      router.push(`/chat/${result}`);
     });
   }
 
