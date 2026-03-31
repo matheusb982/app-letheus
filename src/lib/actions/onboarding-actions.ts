@@ -12,6 +12,7 @@ import { getMonthName } from "@/lib/utils/months";
 import { getUserFamilyId } from "@/lib/actions/family-helpers";
 import { importCSV } from "@/lib/services/csv-import";
 import { importText } from "@/lib/services/text-import";
+import { Category, type ICategory } from "@/lib/db/models/category";
 
 export async function checkOnboardingStatus() {
   const session = await auth();
@@ -228,18 +229,18 @@ export async function skipOnboarding() {
 }
 
 const SAMPLE_PURCHASES = [
-  { description: "Supermercado Extra", value: 287.5, subcategory_name: "Alimentação", type: "debit" as const, daysAgo: 2 },
-  { description: "Uber", value: 23.9, subcategory_name: "Transporte", type: "credit" as const, daysAgo: 3 },
-  { description: "Netflix", value: 55.9, subcategory_name: "Assinaturas", type: "credit" as const, daysAgo: 5 },
-  { description: "Restaurante Sabor & Arte", value: 89.0, subcategory_name: "Alimentação", type: "credit" as const, daysAgo: 6 },
-  { description: "Farmácia Drogasil", value: 67.8, subcategory_name: "Saúde", type: "debit" as const, daysAgo: 7 },
-  { description: "Posto Shell", value: 250.0, subcategory_name: "Transporte", type: "debit" as const, daysAgo: 8 },
-  { description: "iFood", value: 45.5, subcategory_name: "Alimentação", type: "credit" as const, daysAgo: 9 },
-  { description: "Spotify", value: 21.9, subcategory_name: "Assinaturas", type: "credit" as const, daysAgo: 10 },
-  { description: "Mercado Livre", value: 159.9, subcategory_name: "Compras", type: "credit" as const, daysAgo: 12 },
-  { description: "Academia Smart Fit", value: 109.9, subcategory_name: "Saúde", type: "credit" as const, daysAgo: 15 },
-  { description: "Padaria Pão Quente", value: 32.0, subcategory_name: "Alimentação", type: "debit" as const, daysAgo: 1 },
-  { description: "Conta de Luz - Enel", value: 185.0, subcategory_name: "Moradia", type: "debit" as const, daysAgo: 18 },
+  { description: "Supermercado Extra", value: 287.5, subcategory_name: "Supermercado", type: "debit" as const, daysAgo: 2 },
+  { description: "Uber", value: 23.9, subcategory_name: "Uber/99", type: "credit" as const, daysAgo: 3 },
+  { description: "Netflix", value: 55.9, subcategory_name: "Streaming/Assinaturas", type: "credit" as const, daysAgo: 5 },
+  { description: "Restaurante Sabor & Arte", value: 89.0, subcategory_name: "Restaurante", type: "credit" as const, daysAgo: 6 },
+  { description: "Farmácia Drogasil", value: 67.8, subcategory_name: "Farmácia", type: "debit" as const, daysAgo: 7 },
+  { description: "Posto Shell", value: 250.0, subcategory_name: "Combustível", type: "debit" as const, daysAgo: 8 },
+  { description: "iFood", value: 45.5, subcategory_name: "Delivery/iFood", type: "credit" as const, daysAgo: 9 },
+  { description: "Spotify", value: 21.9, subcategory_name: "Streaming/Assinaturas", type: "credit" as const, daysAgo: 10 },
+  { description: "Mercado Livre", value: 159.9, subcategory_name: "Eletrônicos", type: "credit" as const, daysAgo: 12 },
+  { description: "Academia Smart Fit", value: 109.9, subcategory_name: "Academia", type: "credit" as const, daysAgo: 15 },
+  { description: "Padaria Pão Quente", value: 32.0, subcategory_name: "Padaria", type: "debit" as const, daysAgo: 1 },
+  { description: "Conta de Luz - Enel", value: 185.0, subcategory_name: "Luz", type: "debit" as const, daysAgo: 18 },
 ] as const;
 
 export async function createSampleData() {
@@ -259,11 +260,23 @@ export async function createSampleData() {
   });
   if (existing > 0) return { created: existing };
 
+  // Build subcategory name → id map from family categories
+  const categories = await Category.find({ family_id: familyId, category_type: "purchase" }).lean<ICategory[]>();
+  const subcatMap = new Map<string, string>();
+  for (const cat of categories) {
+    for (const sub of cat.subcategories) {
+      subcatMap.set(sub.name.toLowerCase(), sub._id.toString());
+    }
+  }
+
   const now = new Date();
   for (const item of SAMPLE_PURCHASES) {
     const date = new Date(now);
     date.setDate(date.getDate() - item.daysAgo);
     date.setHours(12, 0, 0, 0);
+
+    // Try to match subcategory by name (case-insensitive)
+    const subcategoryId = subcatMap.get(item.subcategory_name.toLowerCase());
 
     await Purchase.create({
       value: item.value,
@@ -271,6 +284,7 @@ export async function createSampleData() {
       purchase_type: item.type,
       description: item.description,
       subcategory_name: item.subcategory_name,
+      ...(subcategoryId ? { subcategory_id: subcategoryId } : {}),
       period_id: user.period_id,
       family_id: familyId,
       is_sample: true,
