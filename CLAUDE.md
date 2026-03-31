@@ -10,7 +10,7 @@ Reescrita do SmartFinancial (Rails 7 + MongoDB) para Next.js 15. Multi-tenant po
 - **UI**: shadcn/ui (estilo new-york) + Tailwind CSS 4 + Lucide Icons
 - **DB**: MongoDB via Mongoose 8 (schemas em `src/lib/db/models/`)
 - **Auth**: NextAuth.js v5 (Credentials provider, compatível com bcrypt do Devise/Rails)
-- **IA**: Vercel AI SDK v6 + `@ai-sdk/google` (Gemini 2.5 Flash)
+- **IA**: Vercel AI SDK v6 + `@ai-sdk/openai` (GPT-4o, principal) + `@ai-sdk/google` (Gemini 2.5 Flash, fallback)
 - **Validação**: Zod 3
 - **Gráficos**: Recharts 3
 - **Testes**: Vitest 4 (unit) + Playwright (E2E)
@@ -31,6 +31,7 @@ src/
 │   │   ├── categories/   # CRUD com subcategorias inline
 │   │   ├── chat/         # Assistente IA com streaming
 │   │   └── admin/        # Gestão de usuários e famílias (super admin)
+│   ├── onboarding/       # Wizard de onboarding (5 etapas)
 │   └── api/
 │       ├── auth/         # NextAuth handlers
 │       └── chat/         # Streaming endpoint (AI SDK v6)
@@ -43,6 +44,7 @@ src/
 │   ├── charts/           # annual-line-chart
 │   ├── chat/             # chat-client
 │   ├── admin/            # admin-families-client, admin-family-members-client, admin-users-client
+│   ├── onboarding/       # onboarding-wizard (wizard multi-step)
 │   └── shared/           # delete-button, submit-button, subcategory-form, revenue-form, loading
 ├── lib/
 │   ├── auth.ts           # NextAuth config + JWT callbacks
@@ -50,8 +52,8 @@ src/
 │   ├── db/
 │   │   ├── connection.ts # Mongoose singleton
 │   │   └── models/       # 12 models (inclui Family)
-│   ├── actions/          # Server Actions (CRUD, dashboard, chart, chat, import, period, family)
-│   ├── services/         # Lógica de negócio (csv-import, text-import, ai-classifier, payments-per-category)
+│   ├── actions/          # Server Actions (CRUD, dashboard, chart, chat, import, period, family, onboarding)
+│   ├── services/         # Lógica de negócio (csv-import, text-import, ai-classifier, ai-provider, payments-per-category)
 │   ├── validations/      # Zod schemas por entidade
 │   └── utils/            # format, months, constants, cn
 ├── hooks/
@@ -87,9 +89,10 @@ npm run lint         # ESLint
 - Toda query DEVE filtrar por `family_id` — usar `getUserFamilyContext()` ou `getUserFamilyId()` de `family-helpers.ts`
 - JWT contém `familyId` (além de `userId` e `periodId`)
 - Categorias com `family_id: null` são templates globais, clonados ao criar nova família
-- Self-registration desabilitado — super admin cria famílias e seus membros via `/admin/families`
-- `ADMIN_EMAIL` define o super admin que pode criar famílias
-- Script de migração: `npx tsx scripts/migrate-family.ts`
+- Self-registration habilitado via landing page (`/register`)
+- No registro: cria família automaticamente ("Família {nome}"), clona categorias globais, redireciona ao onboarding
+- Super admin (`ADMIN_EMAIL`) pode criar famílias e membros via `/admin/families`
+- Scripts: `npx tsx scripts/migrate-family.ts`, `npx tsx scripts/seed-global-categories.ts`
 
 ### Auth
 - Senhas compatíveis com bcrypt do Devise (Rails): `$2a$` hash
@@ -99,7 +102,22 @@ npm run lint         # ESLint
 
 ### IDs Hardcoded
 - Aporte subcategory IDs: `674f65d9e182e26ad80cc636`, `674f65d9e182e26ad80cc635` (definidos em `constants.ts`)
+- Fallback: busca por nome "APORTE" quando IDs não são encontrados (novos usuários)
 - Receitas default ao criar período: Herospark (R$ 14.500) e Prefeitura (R$ 4.000)
+
+### Onboarding
+- 5 etapas: Boas-vindas → Receita → Importação → Processamento → Resumo
+- Cria período, receitas e despesas automaticamente
+- Suporta: CSV, texto colado, dados de exemplo
+- Dados de exemplo marcados com `is_sample: true` — deletados automaticamente na primeira importação real ou criação manual
+- `onboarding_completed` no User controla se mostra o wizard
+- Usuários existentes (com `family_id`) pulam o onboarding
+
+### Sugestão de Metas (IA)
+- Precisa de pelo menos 2 períodos com dados pra sugerir metas
+- Gastos fixos (variação ≤15%) protegidos do cap de 80% da receita
+- Gastos com média > meta (estourados) também protegidos do cap
+- Total sugerido nunca ultrapassa 80% da receita — só reduz variáveis
 
 ### AI SDK v6 (Breaking Changes)
 - Import hooks de `@ai-sdk/react` (não `ai/react`)
@@ -119,10 +137,18 @@ npm run lint         # ESLint
 - Não usar `any` — tipar tudo (ESLint bloqueia)
 
 ### CSV Import
-- Detecta formato pelo header: "Estabelecimento" = débito, "Valor em R$" = crédito
+- Detecta formato pelo header para escolher o parser (não o tipo de compra)
+- Tipo de compra (débito/crédito) escolhido pelo usuário
 - Remove BOM, parsing com papaparse (separator `;`)
-- Classificação IA via Gemini com fallback para "Outros"
+- Classificação IA via GPT-4o com fallback para Gemini, depois "Outros"
 - Dedup por fingerprint: `date|value|description`
+
+### IA — Fallback entre Provedores
+- `ai-provider.ts` abstrai OpenAI e Gemini com `generateTextWithFallback()` e `streamTextWithFallback()`
+- Classificação de despesas: GPT-4o (principal) → Gemini (fallback)
+- Sugestão de metas: GPT-4o (principal) → Gemini (fallback)
+- Chat streaming: GPT-4o (principal) → Gemini (fallback)
+- Se o provedor principal falha (erro de API, saldo, timeout), tenta o fallback automaticamente
 
 ### Chat
 - Rate limit: 50 perguntas/dia por usuário
@@ -135,6 +161,7 @@ npm run lint         # ESLint
 ### Produção
 ```
 MONGODB_URI=mongodb+srv://...
+OPENAI_API_KEY=...
 GOOGLE_GENERATIVE_AI_API_KEY=...
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
@@ -143,6 +170,10 @@ NEXTAUTH_URL=http://localhost:3000
 ### Ambiente Local (desenvolvimento)
 ```
 MONGODB_URI=mongodb://localhost:27018/letheus
+OPENAI_API_KEY=...
+GOOGLE_GENERATIVE_AI_API_KEY=...
 NEXTAUTH_SECRET=dev-secret-key-for-local-testing-only
 NEXTAUTH_URL=http://localhost:3001
 ```
+
+> MongoDB local roda na porta **27018** via Docker (`docker-compose.yml`)
