@@ -15,8 +15,11 @@ import {
   UserCog,
   LogOut,
   TrendingUp,
+  MessageSquarePlus,
+  MessageSquareText,
 } from "lucide-react";
 import { signOutAction } from "@/lib/actions/sign-out-action";
+import { FeedbackDialog } from "@/components/shared/feedback-dialog";
 import { isAdmin as checkIsAdmin } from "@/lib/actions/admin-actions";
 import { isFamilyOwner as checkIsFamilyOwner } from "@/lib/actions/family-member-actions";
 import {
@@ -59,6 +62,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const pathname = usePathname();
   const [admin, setAdmin] = useState(false);
   const [familyOwner, setFamilyOwner] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([checkIsAdmin(), checkIsFamilyOwner()]).then(
@@ -170,6 +174,18 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith("/admin/feedbacks")}
+                    tooltip="Feedbacks"
+                  >
+                    <Link href="/admin/feedbacks">
+                      <MessageSquareText />
+                      <span>Feedbacks</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -219,6 +235,10 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
+                  <MessageSquarePlus />
+                  Enviar Feedback
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => signOutAction()}>
                   <LogOut />
                   Sair
@@ -228,6 +248,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </Sidebar>
   );
 }
