@@ -5,7 +5,6 @@ import { auth } from "@/lib/auth";
 import { ChatSession } from "@/lib/db/models/chat-session";
 import { ChatMessage, type IChatMessage } from "@/lib/db/models/chat-message";
 import { revalidatePath } from "next/cache";
-import { DAILY_CHAT_LIMIT } from "@/lib/utils/constants";
 import { getUserFamilyId } from "@/lib/actions/family-helpers";
 import { checkSubscriptionActive } from "@/lib/actions/subscription-helpers";
 
@@ -94,24 +93,3 @@ export async function deleteChatSession(sessionId: string) {
   revalidatePath("/chat");
 }
 
-export async function getDailyRequestsCount(): Promise<number> {
-  const session = await auth();
-  if (!session) return 0;
-
-  await connectDB();
-  const familyId = await getUserFamilyId();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-
-  return ChatMessage.countDocuments({
-    user_id: session.user.id,
-    family_id: familyId,
-    role: "user",
-    created_at: { $gte: todayStart },
-  });
-}
-
-export async function getChatLimit(): Promise<{ used: number; limit: number }> {
-  const used = await getDailyRequestsCount();
-  return { used, limit: DAILY_CHAT_LIMIT };
-}

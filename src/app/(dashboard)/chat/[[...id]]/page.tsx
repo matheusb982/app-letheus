@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getChatSessions, getChatMessages, getChatLimit } from "@/lib/actions/chat-actions";
+import { getChatSessions, getChatMessages } from "@/lib/actions/chat-actions";
 import { ChatClient } from "@/components/chat/chat-client";
 
 export default async function ChatPage({
@@ -10,10 +10,7 @@ export default async function ChatPage({
   const { id } = await params;
   const sessionId = id?.[0];
 
-  const [sessions, chatLimit] = await Promise.all([
-    getChatSessions(),
-    getChatLimit(),
-  ]);
+  const sessions = await getChatSessions();
 
   // If no session selected and sessions exist, redirect to most recent
   if (!sessionId && sessions.length > 0) {
@@ -27,7 +24,6 @@ export default async function ChatPage({
       sessions={sessions}
       currentSessionId={sessionId ?? null}
       initialMessages={messages}
-      chatLimit={chatLimit}
     />
   );
 }

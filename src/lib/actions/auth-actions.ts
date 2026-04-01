@@ -49,6 +49,11 @@ export async function registerAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
+  const termsAccepted = formData.get("terms") === "on";
+  if (!termsAccepted) {
+    return { error: "Você precisa aceitar os Termos de Uso e Política de Privacidade" };
+  }
+
   const raw = {
     fullname: formData.get("fullname") as string,
     email: formData.get("email") as string,
@@ -76,6 +81,7 @@ export async function registerAction(
     encrypted_password,
     family_role: "admin",
     onboarding_completed: false,
+    terms_accepted_at: new Date(),
   });
 
   // Create family (user's first name as family name)

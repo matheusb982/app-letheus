@@ -1,5 +1,3 @@
-export const DAILY_CHAT_LIMIT = 50;
-
 export const CACHE_TTL_HOURS = 3;
 
 export const DEFAULT_REVENUES = [

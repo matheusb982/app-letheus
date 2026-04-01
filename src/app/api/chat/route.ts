@@ -10,7 +10,7 @@ import { ChatMessage } from "@/lib/db/models/chat-message";
 import { ChatSession } from "@/lib/db/models/chat-session";
 import { CachedResponse, type ICachedResponse } from "@/lib/db/models/cached-response";
 import { Period, type IPeriod } from "@/lib/db/models/period";
-import { DAILY_CHAT_LIMIT, ADMIN_EMAIL } from "@/lib/utils/constants";
+import { ADMIN_EMAIL } from "@/lib/utils/constants";
 import { MONTH_NAMES } from "@/lib/utils/months";
 import { createHash } from "crypto";
 
@@ -47,25 +47,6 @@ export async function POST(req: Request) {
   // Get user and family context
   const user = await User.findById(session.user.id);
   const familyId = user?.family_id;
-
-  // Rate limit
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const dailyCount = await ChatMessage.countDocuments({
-    user_id: session.user.id,
-    family_id: familyId,
-    role: "user",
-    created_at: { $gte: todayStart },
-  });
-
-  if (dailyCount >= DAILY_CHAT_LIMIT) {
-    return new Response(
-      JSON.stringify({
-        error: "Você atingiu o limite diário de perguntas. Tente novamente amanhã.",
-      }),
-      { status: 429, headers: { "Content-Type": "application/json" } }
-    );
-  }
 
   // Check cache
   const questionHash = createHash("sha256")

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
@@ -41,7 +40,6 @@ interface ChatClientProps {
   sessions: SerializedChatSession[];
   currentSessionId: string | null;
   initialMessages: SerializedChatMessage[];
-  chatLimit: { used: number; limit: number };
 }
 
 interface ChatMsg {
@@ -122,8 +120,6 @@ function SessionList({
   onNewSession,
   onDeleteSession,
   onSelectSession,
-  chatLimit,
-  isAtLimit,
 }: {
   sessions: SerializedChatSession[];
   currentSessionId: string | null;
@@ -131,8 +127,6 @@ function SessionList({
   onNewSession: () => void;
   onDeleteSession: (id: string) => void;
   onSelectSession: (id: string) => void;
-  chatLimit: { used: number; limit: number };
-  isAtLimit: boolean;
 }) {
   return (
     <>
@@ -170,14 +164,6 @@ function SessionList({
           <p className="text-xs text-muted-foreground text-center py-8">Nenhuma conversa ainda</p>
         )}
       </div>
-      <div className="p-3 border-t">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Perguntas hoje</span>
-          <Badge variant={isAtLimit ? "destructive" : "secondary"} className="text-xs font-mono">
-            {chatLimit.used}/{chatLimit.limit}
-          </Badge>
-        </div>
-      </div>
     </>
   );
 }
@@ -186,7 +172,6 @@ export function ChatClient({
   sessions,
   currentSessionId,
   initialMessages,
-  chatLimit,
 }: ChatClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -199,8 +184,6 @@ export function ChatClient({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-
-  const isAtLimit = chatLimit.used >= chatLimit.limit;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -242,7 +225,7 @@ export function ChatClient({
   }
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isLoading || isAtLimit) return;
+    if (!text.trim() || isLoading) return;
 
     const userMsg: ChatMsg = { id: genId(), role: "user", content: text };
     const assistantMsg: ChatMsg = { id: genId(), role: "assistant", content: "" };
@@ -293,11 +276,11 @@ export function ChatClient({
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [isLoading, isAtLimit, currentSessionId]);
+  }, [isLoading, currentSessionId]);
 
   function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
-    if (!input.trim() || isLoading || isAtLimit) return;
+    if (!input.trim() || isLoading) return;
     const text = input;
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -325,8 +308,6 @@ export function ChatClient({
     onNewSession: handleNewSession,
     onDeleteSession: handleDeleteSession,
     onSelectSession: handleSelectSession,
-    chatLimit,
-    isAtLimit,
   };
 
   return (
@@ -352,11 +333,6 @@ export function ChatClient({
             </SheetContent>
           </Sheet>
           <span className="text-sm font-medium truncate">Assistente IA</span>
-          <div className="ml-auto">
-            <Badge variant={isAtLimit ? "destructive" : "secondary"} className="text-xs font-mono">
-              {chatLimit.used}/{chatLimit.limit}
-            </Badge>
-          </div>
         </div>
 
         {!currentSessionId ? (
@@ -486,16 +462,16 @@ export function ChatClient({
                     value={input}
                     onChange={handleTextareaChange}
                     onKeyDown={onKeyDown}
-                    placeholder={isAtLimit ? "Limite diário atingido" : "Pergunte sobre suas finanças..."}
+                    placeholder={"Pergunte sobre suas finanças..."}
                     rows={1}
                     className="min-h-[44px] max-h-[150px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-10 pr-12"
-                    disabled={isLoading || isAtLimit}
+                    disabled={isLoading}
                   />
                   <Button
                     type="submit"
                     size="icon"
                     className="absolute right-2 bottom-2 h-8 w-8 rounded-lg"
-                    disabled={isLoading || !input.trim() || isAtLimit}
+                    disabled={isLoading || !input.trim()}
                   >
                     <ArrowUp className="h-4 w-4" />
                   </Button>

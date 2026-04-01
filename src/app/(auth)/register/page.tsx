@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 
 const initialState: ActionState = {};
@@ -77,6 +78,19 @@ export default function RegisterPage() {
               required
               autoComplete="new-password"
             />
+          </div>
+          <div className="flex items-start space-x-2">
+            <Checkbox id="terms" name="terms" required />
+            <label htmlFor="terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+              Li e concordo com os{" "}
+              <Link href="/terms" target="_blank" className="text-primary underline hover:text-primary/80">
+                Termos de Uso
+              </Link>{" "}
+              e a{" "}
+              <Link href="/privacy" target="_blank" className="text-primary underline hover:text-primary/80">
+                Política de Privacidade
+              </Link>
+            </label>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">

@@ -698,10 +698,10 @@ function Footer() {
           © 2026 Letheus IA Financeira. Todos os direitos reservados.
         </p>
         <div className="flex gap-6 text-sm text-muted-foreground">
-          <a href="#" className="transition hover:text-foreground">
+          <a href="/terms" className="transition hover:text-foreground">
             Termos
           </a>
-          <a href="#" className="transition hover:text-foreground">
+          <a href="/privacy" className="transition hover:text-foreground">
             Privacidade
           </a>
         </div>
