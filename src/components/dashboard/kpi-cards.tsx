@@ -84,19 +84,19 @@ export function KPICards({ kpis }: KPICardsProps) {
     },
     {
       title: "Performance",
-      description: hasPatrimony
-        ? (kpis.performanceValue >= 0 ? "Acima da meta" : "Abaixo da meta")
-        : "Sem patrimônio para calcular",
+      description: !kpis.hasPerformanceData
+        ? "Precisa de patrimônio em 2 meses para calcular"
+        : kpis.performanceValue >= 0 ? "Rendimento no mês" : "Perda no mês",
       value: kpis.performanceValue,
-      displayValue: hasPatrimony ? formatCurrency(kpis.performanceValue) : "—",
+      displayValue: kpis.hasPerformanceData ? formatCurrency(kpis.performanceValue) : "—",
       icon: BarChart3,
-      borderColor: !hasPatrimony
+      borderColor: !kpis.hasPerformanceData
         ? "border-l-gray-400"
         : kpis.performanceValue >= 0 ? "border-l-teal-500" : "border-l-orange-500",
-      iconBg: !hasPatrimony
+      iconBg: !kpis.hasPerformanceData
         ? "bg-gray-100 text-gray-500"
         : kpis.performanceValue >= 0 ? "bg-teal-100 text-teal-700" : "bg-orange-100 text-orange-700",
-      valueColor: !hasPatrimony
+      valueColor: !kpis.hasPerformanceData
         ? "text-gray-400"
         : kpis.performanceValue >= 0 ? "text-teal-700" : "text-orange-700",
     },

@@ -20,6 +20,7 @@ export interface DashboardKPIs {
   totalGoal: number;
   totalPatrimony: number;
   performanceValue: number;
+  hasPerformanceData: boolean;
 }
 
 export interface GoalAlert {
@@ -116,10 +117,12 @@ export async function getDashboardData() {
   const totalPatrimony = patrimonies.reduce((sum, p) => sum + p.value, 0);
 
   // Performance: current patrimony - previous month patrimony - aporte
+  // Needs: patrimony this month + patrimony last month (at least 2 periods)
   const currentPeriod = await Period.findById(periodId);
   let performanceValue = 0;
+  let hasPerformanceData = false;
 
-  if (currentPeriod) {
+  if (currentPeriod && totalPatrimony > 0) {
     const prevMonth = currentPeriod.month === 1 ? 12 : currentPeriod.month - 1;
     const prevYear = currentPeriod.month === 1 ? currentPeriod.year - 1 : currentPeriod.year;
     const prevPeriod = await Period.findOne({ month: prevMonth, year: prevYear, family_id: familyId });
@@ -127,7 +130,10 @@ export async function getDashboardData() {
     if (prevPeriod) {
       const prevPatrimonies = await Patrimony.find({ period_id: prevPeriod._id, family_id: familyId }).lean<IPatrimony[]>();
       const prevTotalPatrimony = prevPatrimonies.reduce((sum, p) => sum + p.value, 0);
-      performanceValue = totalPatrimony - prevTotalPatrimony - totalAporte;
+      if (prevTotalPatrimony > 0) {
+        performanceValue = totalPatrimony - prevTotalPatrimony - totalAporte;
+        hasPerformanceData = true;
+      }
     }
   }
 
@@ -139,6 +145,7 @@ export async function getDashboardData() {
     totalGoal,
     totalPatrimony,
     performanceValue,
+    hasPerformanceData,
   };
 
   const paymentsPerCategory = await getPaymentsPerCategory(purchases, goals, familyId);
