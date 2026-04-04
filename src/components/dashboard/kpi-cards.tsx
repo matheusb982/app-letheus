@@ -44,7 +44,7 @@ export function KPICards({ kpis }: KPICardsProps) {
       title: "Aporte Mensal",
       description: kpis.totalAporte > 0
         ? "Investido no mês"
-        : "Registre investimentos na categoria Aporte em Despesas",
+        : "Registre despesas em Financeiras > Investimento/Aporte Mensal",
       value: kpis.totalAporte,
       displayValue: kpis.totalAporte > 0 ? formatCurrency(kpis.totalAporte) : "R$ 0,00",
       icon: TrendingUp,

@@ -2,6 +2,7 @@
 import React from "react";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
-import { toast } from "sonner";
 import type { SerializedCategory } from "@/lib/actions/category-actions";
 import {
   createCategory,
@@ -215,7 +215,10 @@ export function CategoriesClient({ categories }: Props) {
                         size="icon"
                         onClick={() => {
                           if (confirm("Excluir categoria e todas subcategorias?")) {
-                            startTransition(() => deleteCategory(cat.id));
+                            startTransition(async () => {
+                              const result = await deleteCategory(cat.id);
+                              if (result?.error) toast.error(result.error);
+                            });
                           }
                         }}
                       >
@@ -254,7 +257,10 @@ export function CategoriesClient({ categories }: Props) {
                             size="icon"
                             onClick={() => {
                               if (confirm("Excluir subcategoria?")) {
-                                startTransition(() => deleteSubcategory(cat.id, sub.id));
+                                startTransition(async () => {
+                                  const result = await deleteSubcategory(cat.id, sub.id);
+                                  if (result?.error) toast.error(result.error);
+                                });
                               }
                             }}
                           >

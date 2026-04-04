@@ -89,13 +89,14 @@ const GLOBAL_CATEGORIES = [
     ],
   },
   {
-    name: "FINANCEIRO",
+    name: "FINANCEIRAS",
     category_type: "purchase",
     subcategories: [
       { name: "Tarifas Bancárias" },
-      { name: "Seguros" },
-      { name: "Impostos" },
-      { name: "Empréstimos/Parcelas" },
+      { name: "Clubes Milhas" },
+      { name: "Seguro de Vida" },
+      { name: "Previdência Privada" },
+      { name: "Investimento/Aporte Mensal" },
     ],
   },
   {

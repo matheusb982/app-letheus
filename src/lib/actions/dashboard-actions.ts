@@ -8,7 +8,7 @@ import { Revenue, type IRevenue } from "@/lib/db/models/revenue";
 import { Goal, type IGoal } from "@/lib/db/models/goal";
 import { Patrimony, type IPatrimony } from "@/lib/db/models/patrimony";
 import { Period } from "@/lib/db/models/period";
-import { APORTE_SUBCATEGORY_IDS, APORTE_CATEGORY_NAME } from "@/lib/utils/constants";
+import { APORTE_SUBCATEGORY_IDS, FINANCEIRAS_CATEGORY_NAME } from "@/lib/utils/constants";
 import { Category } from "@/lib/db/models/category";
 import { getPaymentsPerCategory } from "@/lib/services/payments-per-category";
 
@@ -89,19 +89,22 @@ export async function getDashboardData() {
   const totalRevenue = revenues.reduce((sum, r) => sum + r.value, 0);
   const totalPurchase = purchases.reduce((sum, p) => sum + p.value, 0);
 
-  // Resolve aporte IDs: try hardcoded first, fallback to category name
+  // Resolve aporte IDs: try hardcoded first, fallback to FINANCEIRAS category subcategories
+  const APORTE_SUBCATEGORY_NAMES = ["Investimento/Aporte Mensal", "Previdência Privada"];
   let aporteIds: string[] = [...APORTE_SUBCATEGORY_IDS];
   const hasHardcodedMatch = purchases.some((p) =>
     APORTE_SUBCATEGORY_IDS.includes(p.subcategory_id?.toString() as (typeof APORTE_SUBCATEGORY_IDS)[number])
   );
   if (!hasHardcodedMatch) {
-    const aporteCategory = await Category.findOne({
+    const financeirasCategory = await Category.findOne({
       family_id: familyId,
-      name: APORTE_CATEGORY_NAME,
-      category_type: "patrimony",
+      name: FINANCEIRAS_CATEGORY_NAME,
+      category_type: "purchase",
     });
-    if (aporteCategory) {
-      aporteIds = aporteCategory.subcategories.map((s: { _id: { toString(): string } }) => s._id.toString());
+    if (financeirasCategory) {
+      aporteIds = financeirasCategory.subcategories
+        .filter((s: { name: string }) => APORTE_SUBCATEGORY_NAMES.includes(s.name))
+        .map((s: { _id: { toString(): string } }) => s._id.toString());
     }
   }
 

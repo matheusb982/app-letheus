@@ -636,7 +636,7 @@ export function OnboardingWizard({ userName }: Props) {
                   <TrendingUp className="size-5 text-blue-500 shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">Investe?</span>{" "}
-                    Para acompanhar seus aportes, registre-os como despesas na categoria &quot;Aporte&quot;. Eles aparecem separados no dashboard.
+                    Para acompanhar seus aportes, registre-os como despesas em Financeiras &gt; Investimento/Aporte Mensal. Eles aparecem separados no dashboard.
                   </p>
                 </div>
               </div>

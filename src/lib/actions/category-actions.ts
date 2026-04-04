@@ -5,6 +5,31 @@ import { connectDB } from "@/lib/db/connection";
 import { Category, type ICategory } from "@/lib/db/models/category";
 import { categorySchema, subcategorySchema } from "@/lib/validations/categories";
 import { getUserFamilyId } from "@/lib/actions/family-helpers";
+import { APORTE_CATEGORY_NAME, FINANCEIRAS_CATEGORY_NAME } from "@/lib/utils/constants";
+
+const PROTECTED_CATEGORIES = [FINANCEIRAS_CATEGORY_NAME, APORTE_CATEGORY_NAME];
+const PROTECTED_SUBCATEGORIES = ["Investimento/Aporte Mensal", "Previdência Privada"];
+
+async function isProtectedCategory(categoryId: string): Promise<{ protected: boolean; name?: string }> {
+  const category = await Category.findById(categoryId);
+  if (!category) return { protected: false };
+  if (PROTECTED_CATEGORIES.includes(category.name)) {
+    return { protected: true, name: category.name };
+  }
+  return { protected: false };
+}
+
+async function isProtectedSubcategory(categoryId: string, subcategoryId: string): Promise<{ protected: boolean; name?: string }> {
+  const category = await Category.findById(categoryId);
+  if (!category) return { protected: false };
+  const sub = category.subcategories.find(
+    (s: { _id: { toString(): string }; name: string }) => s._id.toString() === subcategoryId
+  );
+  if (sub && PROTECTED_SUBCATEGORIES.includes(sub.name)) {
+    return { protected: true, name: sub.name };
+  }
+  return { protected: false };
+}
 
 export interface SerializedSubcategory {
   id: string;
@@ -102,8 +127,13 @@ export async function updateCategory(id: string, data: FormData) {
 
 export async function deleteCategory(id: string) {
   await connectDB();
+  const check = await isProtectedCategory(id);
+  if (check.protected) {
+    return { error: `A categoria "${check.name}" é usada pelo sistema e não pode ser excluída.` };
+  }
   await Category.findByIdAndDelete(id);
   revalidatePath("/categories");
+  return { success: true };
 }
 
 export async function addSubcategory(categoryId: string, data: FormData) {
@@ -160,10 +190,15 @@ export async function updateSubcategory(
 
 export async function deleteSubcategory(categoryId: string, subcategoryId: string) {
   await connectDB();
+  const check = await isProtectedSubcategory(categoryId, subcategoryId);
+  if (check.protected) {
+    return { error: `A subcategoria "${check.name}" é usada pelo sistema e não pode ser excluída.` };
+  }
 
   await Category.findByIdAndUpdate(categoryId, {
     $pull: { subcategories: { _id: subcategoryId } },
   });
 
   revalidatePath("/categories");
+  return { success: true };
 }
