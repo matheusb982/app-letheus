@@ -42,13 +42,15 @@ export function KPICards({ kpis }: KPICardsProps) {
     },
     {
       title: "Aporte Mensal",
-      description: "Investido no mês",
+      description: kpis.totalAporte > 0
+        ? "Investido no mês"
+        : "Registre investimentos na categoria Aporte em Despesas",
       value: kpis.totalAporte,
-      displayValue: formatCurrency(kpis.totalAporte),
+      displayValue: kpis.totalAporte > 0 ? formatCurrency(kpis.totalAporte) : "R$ 0,00",
       icon: TrendingUp,
-      borderColor: "border-l-blue-500",
-      iconBg: "bg-blue-100 text-blue-700",
-      valueColor: "text-blue-700",
+      borderColor: kpis.totalAporte > 0 ? "border-l-blue-500" : "border-l-gray-400",
+      iconBg: kpis.totalAporte > 0 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500",
+      valueColor: kpis.totalAporte > 0 ? "text-blue-700" : "text-gray-400",
     },
     {
       title: "Saldo",

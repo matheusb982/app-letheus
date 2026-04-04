@@ -79,7 +79,7 @@ export default function RegisterPage() {
               autoComplete="new-password"
             />
           </div>
-          <div className="flex items-start space-x-2">
+          <div className="flex items-start space-x-2 mb-2">
             <Checkbox id="terms" name="terms" required />
             <label htmlFor="terms" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
               Li e concordo com os{" "}

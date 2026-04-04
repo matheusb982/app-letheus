@@ -630,6 +630,17 @@ export function OnboardingWizard({ userName }: Props) {
                 </div>
               </div>
 
+              {/* Aporte tip */}
+              <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                <div className="flex gap-3">
+                  <TrendingUp className="size-5 text-blue-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Investe?</span>{" "}
+                    Para acompanhar seus aportes, registre-os como despesas na categoria &quot;Aporte&quot;. Eles aparecem separados no dashboard.
+                  </p>
+                </div>
+              </div>
+
               <Button
                 onClick={handleComplete}
                 disabled={isPending}
