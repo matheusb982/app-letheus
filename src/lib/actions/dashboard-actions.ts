@@ -112,7 +112,8 @@ export async function getDashboardData() {
   const totalAporte = purchases
     .filter((p) => aporteIds.includes(p.subcategory_id?.toString() ?? ""))
     .reduce((sum, p) => sum + p.value, 0);
-  const totalBalance = totalRevenue - totalPurchase;
+  const totalPurchaseWithoutAporte = totalPurchase - totalAporte;
+  const totalBalance = totalRevenue - totalPurchaseWithoutAporte - totalAporte;
   const totalGoal = goals.reduce((sum, g) => sum + g.value, 0);
   const totalPatrimony = patrimonies.reduce((sum, p) => sum + p.value, 0);
 
@@ -139,7 +140,7 @@ export async function getDashboardData() {
 
   const kpis: DashboardKPIs = {
     totalRevenue,
-    totalPurchase,
+    totalPurchase: totalPurchaseWithoutAporte,
     totalAporte,
     totalBalance,
     totalGoal,
