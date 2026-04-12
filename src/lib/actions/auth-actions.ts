@@ -1,5 +1,6 @@
 "use server";
 
+import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { signIn } from "@/lib/auth";
 import { loginSchema, registerSchema } from "@/lib/validations/auth";
@@ -9,6 +10,7 @@ import { connectDB } from "@/lib/db/connection";
 import { User } from "@/lib/db/models/user";
 import { Family } from "@/lib/db/models/family";
 import { Category, type ICategory } from "@/lib/db/models/category";
+import { checkRateLimit, resetRateLimit } from "@/lib/services/rate-limiter";
 
 export type ActionState = {
   error?: string;
@@ -29,6 +31,14 @@ export async function loginAction(
     return { error: parsed.error.errors[0].message };
   }
 
+  // Rate limit: 5 attempts per email per 15 minutes
+  const rateLimitKey = `login:${parsed.data.email.toLowerCase()}`;
+  const { allowed, retryAfterSeconds } = checkRateLimit(rateLimitKey);
+  if (!allowed) {
+    const minutes = Math.ceil(retryAfterSeconds / 60);
+    return { error: `Muitas tentativas de login. Tente novamente em ${minutes} minuto${minutes > 1 ? "s" : ""}.` };
+  }
+
   try {
     await signIn("credentials", {
       email: parsed.data.email,
@@ -42,6 +52,8 @@ export async function loginAction(
     throw error;
   }
 
+  // Reset rate limit on successful login
+  resetRateLimit(rateLimitKey);
   redirect("/dashboard");
 }
 
@@ -73,45 +85,49 @@ export async function registerAction(
     return { error: "Email já cadastrado" };
   }
 
-  // Create user
+  // All registration steps in a transaction to prevent orphaned data
   const encrypted_password = await bcrypt.hash(parsed.data.password, 12);
-  const user = await User.create({
-    email: parsed.data.email.toLowerCase(),
-    fullname: parsed.data.fullname,
-    encrypted_password,
-    family_role: "admin",
-    onboarding_completed: false,
-    terms_accepted_at: new Date(),
-  });
-
-  // Create family (user's first name as family name)
   const familyName = parsed.data.fullname.split(" ")[0] || "Minha Família";
   const trialEndsAt = new Date();
   trialEndsAt.setDate(trialEndsAt.getDate() + 7);
-
-  const family = await Family.create({
-    name: `Família ${familyName}`,
-    owner_id: user._id,
-    subscription_status: "trialing",
-    trial_ends_at: trialEndsAt,
-  });
-
-  // Link user to family
-  await User.findByIdAndUpdate(user._id, { family_id: family._id });
-
-  // Clone global category templates
   const templates = await Category.find({ family_id: null }).lean<ICategory[]>();
-  for (const template of templates) {
-    await Category.create({
-      name: template.name,
-      description: template.description,
-      category_type: template.category_type,
-      subcategories: template.subcategories.map((s) => ({
-        name: s.name,
-        description: s.description,
-      })),
-      family_id: family._id,
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const [user] = await User.create([{
+        email: parsed.data.email.toLowerCase(),
+        fullname: parsed.data.fullname,
+        encrypted_password,
+        family_role: "admin",
+        onboarding_completed: false,
+        terms_accepted_at: new Date(),
+      }], { session });
+
+      const [family] = await Family.create([{
+        name: `Família ${familyName}`,
+        owner_id: user._id,
+        subscription_status: "trialing",
+        trial_ends_at: trialEndsAt,
+      }], { session });
+
+      await User.findByIdAndUpdate(user._id, { family_id: family._id }, { session });
+
+      for (const template of templates) {
+        await Category.create([{
+          name: template.name,
+          description: template.description,
+          category_type: template.category_type,
+          subcategories: template.subcategories.map((s) => ({
+            name: s.name,
+            description: s.description,
+          })),
+          family_id: family._id,
+        }], { session });
+      }
     });
+  } finally {
+    await session.endSession();
   }
 
   // Auto-login

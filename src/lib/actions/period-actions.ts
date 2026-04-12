@@ -52,16 +52,16 @@ export async function createNewPeriod() {
     nextYear = now.getFullYear();
   }
 
-  // Check if period already exists
-  let newPeriod = await Period.findOne({ month: nextMonth, year: nextYear, family_id: familyId });
+  // Atomic upsert — prevents race condition creating duplicate periods
+  const result = await Period.findOneAndUpdate(
+    { month: nextMonth, year: nextYear, family_id: familyId },
+    { $setOnInsert: { name: getMonthName(nextMonth), month: nextMonth, year: nextYear, family_id: familyId } },
+    { upsert: true, new: true, rawResult: true }
+  );
+  const newPeriod = result.value!;
+  const wasCreated = result.lastErrorObject?.updatedExisting === false;
 
-  if (!newPeriod) {
-    newPeriod = await Period.create({
-      name: getMonthName(nextMonth),
-      month: nextMonth,
-      year: nextYear,
-      family_id: familyId,
-    });
+  if (wasCreated) {
 
     // Copy goals from current period
     if (currentPeriod) {

@@ -230,19 +230,21 @@ async function anonymizeUserReferences(userId: string) {
 
 /**
  * Exclui todos os dados financeiros de uma família.
+ * Aceita session opcional para uso em transações.
  */
-async function deleteAllFamilyData(familyId: mongoose.Types.ObjectId) {
-  await Purchase.deleteMany({ family_id: familyId });
-  await Revenue.deleteMany({ family_id: familyId });
-  await Goal.deleteMany({ family_id: familyId });
-  await Patrimony.deleteMany({ family_id: familyId });
-  await Period.deleteMany({ family_id: familyId });
-  await Category.deleteMany({ family_id: familyId });
-  await ChatSession.deleteMany({ family_id: familyId });
-  await ChatMessage.deleteMany({ family_id: familyId });
-  await CachedResponse.deleteMany({ family_id: familyId });
-  await ClassificationRule.deleteMany({ family_id: familyId });
-  await AuditLog.deleteMany({ family_id: familyId });
+async function deleteAllFamilyData(familyId: mongoose.Types.ObjectId, session?: mongoose.ClientSession) {
+  const opts = session ? { session } : {};
+  await Purchase.deleteMany({ family_id: familyId }, opts);
+  await Revenue.deleteMany({ family_id: familyId }, opts);
+  await Goal.deleteMany({ family_id: familyId }, opts);
+  await Patrimony.deleteMany({ family_id: familyId }, opts);
+  await Period.deleteMany({ family_id: familyId }, opts);
+  await Category.deleteMany({ family_id: familyId }, opts);
+  await ChatSession.deleteMany({ family_id: familyId }, opts);
+  await ChatMessage.deleteMany({ family_id: familyId }, opts);
+  await CachedResponse.deleteMany({ family_id: familyId }, opts);
+  await ClassificationRule.deleteMany({ family_id: familyId }, opts);
+  await AuditLog.deleteMany({ family_id: familyId }, opts);
 }
 
 /**
@@ -271,10 +273,17 @@ export async function deleteMyAccount() {
         };
       }
 
-      // Owner é o único membro — excluir tudo
-      await deleteAllFamilyData(family._id as mongoose.Types.ObjectId);
-      await User.findByIdAndDelete(session.user.id);
-      await Family.findByIdAndDelete(family._id);
+      // Owner é o único membro — excluir tudo em transação
+      const txSession = await mongoose.startSession();
+      try {
+        await txSession.withTransaction(async () => {
+          await deleteAllFamilyData(family._id as mongoose.Types.ObjectId, txSession);
+          await User.findByIdAndDelete(session.user.id, { session: txSession });
+          await Family.findByIdAndDelete(family._id, { session: txSession });
+        });
+      } finally {
+        await txSession.endSession();
+      }
 
       await signOut({ redirect: false });
       return { success: true, redirect: "/login" };
@@ -309,9 +318,16 @@ export async function deleteMyFamily(): Promise<{ error?: string; success?: bool
     const { family } = await requireFamilyOwner();
     const familyId = family._id as mongoose.Types.ObjectId;
 
-    await deleteAllFamilyData(familyId);
-    await User.deleteMany({ family_id: familyId });
-    await Family.findByIdAndDelete(familyId);
+    const txSession = await mongoose.startSession();
+    try {
+      await txSession.withTransaction(async () => {
+        await deleteAllFamilyData(familyId, txSession);
+        await User.deleteMany({ family_id: familyId }, { session: txSession });
+        await Family.findByIdAndDelete(familyId, { session: txSession });
+      });
+    } finally {
+      await txSession.endSession();
+    }
 
     await signOut({ redirect: false });
     return { success: true, redirect: "/login" };
