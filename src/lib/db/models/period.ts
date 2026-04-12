@@ -21,7 +21,7 @@ const PeriodSchema = new Schema<IPeriod>(
   }
 );
 
-PeriodSchema.index({ family_id: 1, month: 1, year: 1 });
+PeriodSchema.index({ family_id: 1, month: 1, year: 1 }, { unique: true });
 
 export const Period =
   mongoose.models.Period ||
