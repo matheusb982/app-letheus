@@ -55,8 +55,8 @@ export async function getPurchases(subcategoryId?: string): Promise<SerializedPu
 }
 
 export async function getPurchaseById(id: string): Promise<SerializedPurchase | null> {
-  await connectDB();
-  const p = await Purchase.findById(id).lean<IPurchase>();
+  const { familyId } = await getUserFamilyContext();
+  const p = await Purchase.findOne({ _id: id, family_id: familyId }).lean<IPurchase>();
   if (!p) return null;
   return {
     id: p._id.toString(),
@@ -141,9 +141,10 @@ export async function updatePurchase(id: string, data: FormData) {
     ? await getSubcategoryName(parsed.data.subcategory_id)
     : "";
 
-  const oldPurchase = await Purchase.findById(id).lean<IPurchase>();
-  
-  await Purchase.findByIdAndUpdate(id, {
+  const oldPurchase = await Purchase.findOne({ _id: id, family_id: familyId }).lean<IPurchase>();
+  if (!oldPurchase) return { error: "Despesa não encontrada" };
+
+  await Purchase.findOneAndUpdate({ _id: id, family_id: familyId }, {
     value: parsed.data.value,
     purchase_date: new Date(parsed.data.purchase_date + "T12:00:00"),
     purchase_type: parsed.data.purchase_type,
@@ -177,8 +178,8 @@ export async function updatePurchase(id: string, data: FormData) {
 export async function deletePurchase(id: string) {
   const blocked = await checkSubscriptionActive();
   if (blocked) return { error: blocked };
-  await connectDB();
-  await Purchase.findByIdAndDelete(id);
+  const { familyId } = await getUserFamilyContext();
+  await Purchase.findOneAndDelete({ _id: id, family_id: familyId });
   revalidatePath("/purchases");
   revalidatePath("/dashboard");
 }
