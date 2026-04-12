@@ -37,8 +37,8 @@ export async function getPatrimonies(): Promise<SerializedPatrimony[]> {
 }
 
 export async function getPatrimonyById(id: string): Promise<SerializedPatrimony | null> {
-  await connectDB();
-  const p = await Patrimony.findById(id).lean<IPatrimony>();
+  const { familyId } = await getUserFamilyContext();
+  const p = await Patrimony.findOne({ _id: id, family_id: familyId }).lean<IPatrimony>();
   if (!p) return null;
   return {
     id: p._id.toString(),
@@ -82,7 +82,7 @@ export async function createPatrimony(data: FormData) {
 export async function updatePatrimony(id: string, data: FormData) {
   const blocked = await checkSubscriptionActive();
   if (blocked) return { error: blocked };
-  await connectDB();
+  const { familyId } = await getUserFamilyContext();
 
   const raw = {
     value: data.get("value"),
@@ -96,7 +96,10 @@ export async function updatePatrimony(id: string, data: FormData) {
 
   const subcategoryName = await getSubcategoryName(parsed.data.subcategory_id);
 
-  await Patrimony.findByIdAndUpdate(id, {
+  const existing = await Patrimony.findOne({ _id: id, family_id: familyId });
+  if (!existing) return { error: "Patrimônio não encontrado" };
+
+  await Patrimony.findOneAndUpdate({ _id: id, family_id: familyId }, {
     value: parsed.data.value,
     subcategory_name: subcategoryName,
     subcategory_id: parsed.data.subcategory_id,
@@ -110,8 +113,8 @@ export async function updatePatrimony(id: string, data: FormData) {
 export async function deletePatrimony(id: string) {
   const blocked = await checkSubscriptionActive();
   if (blocked) return { error: blocked };
-  await connectDB();
-  await Patrimony.findByIdAndDelete(id);
+  const { familyId } = await getUserFamilyContext();
+  await Patrimony.findOneAndDelete({ _id: id, family_id: familyId });
   revalidatePath("/patrimonies");
   revalidatePath("/dashboard");
 }

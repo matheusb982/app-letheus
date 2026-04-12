@@ -39,8 +39,8 @@ export async function getGoals(): Promise<SerializedGoal[]> {
 }
 
 export async function getGoalById(id: string): Promise<SerializedGoal | null> {
-  await connectDB();
-  const g = await Goal.findById(id).lean<IGoal>();
+  const { familyId } = await getUserFamilyContext();
+  const g = await Goal.findOne({ _id: id, family_id: familyId }).lean<IGoal>();
   if (!g) return null;
   return {
     id: g._id.toString(),
@@ -84,7 +84,7 @@ export async function createGoal(data: FormData) {
 export async function updateGoal(id: string, data: FormData) {
   const blocked = await checkSubscriptionActive();
   if (blocked) return { error: blocked };
-  await connectDB();
+  const { familyId } = await getUserFamilyContext();
 
   const raw = {
     value: data.get("value"),
@@ -98,7 +98,10 @@ export async function updateGoal(id: string, data: FormData) {
 
   const subcategoryName = await getSubcategoryName(parsed.data.subcategory_id);
 
-  await Goal.findByIdAndUpdate(id, {
+  const existing = await Goal.findOne({ _id: id, family_id: familyId });
+  if (!existing) return { error: "Meta não encontrada" };
+
+  await Goal.findOneAndUpdate({ _id: id, family_id: familyId }, {
     value: parsed.data.value,
     subcategory_name: subcategoryName,
     subcategory_id: parsed.data.subcategory_id,
@@ -112,8 +115,8 @@ export async function updateGoal(id: string, data: FormData) {
 export async function deleteGoal(id: string) {
   const blocked = await checkSubscriptionActive();
   if (blocked) return { error: blocked };
-  await connectDB();
-  await Goal.findByIdAndDelete(id);
+  const { familyId } = await getUserFamilyContext();
+  await Goal.findOneAndDelete({ _id: id, family_id: familyId });
   revalidatePath("/goals");
   revalidatePath("/dashboard");
 }

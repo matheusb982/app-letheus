@@ -29,8 +29,8 @@ export async function getRevenues(): Promise<SerializedRevenue[]> {
 }
 
 export async function getRevenueById(id: string): Promise<SerializedRevenue | null> {
-  await connectDB();
-  const r = await Revenue.findById(id).lean<IRevenue>();
+  const { familyId } = await getUserFamilyContext();
+  const r = await Revenue.findOne({ _id: id, family_id: familyId }).lean<IRevenue>();
   if (!r) return null;
   return {
     id: r._id.toString(),
@@ -73,7 +73,7 @@ export async function createRevenue(data: FormData) {
 export async function updateRevenue(id: string, data: FormData) {
   const blocked = await checkSubscriptionActive();
   if (blocked) return { error: blocked };
-  await connectDB();
+  const { familyId } = await getUserFamilyContext();
 
   const raw = {
     value: data.get("value"),
@@ -86,7 +86,10 @@ export async function updateRevenue(id: string, data: FormData) {
     return { error: parsed.error.errors[0].message };
   }
 
-  await Revenue.findByIdAndUpdate(id, {
+  const existing = await Revenue.findOne({ _id: id, family_id: familyId });
+  if (!existing) return { error: "Receita não encontrada" };
+
+  await Revenue.findOneAndUpdate({ _id: id, family_id: familyId }, {
     value: parsed.data.value,
     name: parsed.data.name,
     description: parsed.data.description ?? "",
@@ -100,8 +103,8 @@ export async function updateRevenue(id: string, data: FormData) {
 export async function deleteRevenue(id: string) {
   const blocked = await checkSubscriptionActive();
   if (blocked) return { error: blocked };
-  await connectDB();
-  await Revenue.findByIdAndDelete(id);
+  const { familyId } = await getUserFamilyContext();
+  await Revenue.findOneAndDelete({ _id: id, family_id: familyId });
   revalidatePath("/revenues");
   revalidatePath("/dashboard");
 }

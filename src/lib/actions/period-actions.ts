@@ -16,7 +16,12 @@ export async function setPeriod(periodId: string) {
   if (!session) throw new Error("Não autorizado");
 
   await connectDB();
-  await User.findByIdAndUpdate(session.user.id, { period_id: periodId });
+  const familyId = await getUserFamilyId();
+
+  const period = await Period.findOne({ _id: periodId, family_id: familyId });
+  if (!period) throw new Error("Período não encontrado");
+
+  await User.findByIdAndUpdate(session.user.id, { period_id: period._id });
 
   revalidatePath("/", "layout");
 }
