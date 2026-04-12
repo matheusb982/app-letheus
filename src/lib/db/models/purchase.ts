@@ -9,6 +9,7 @@ export interface IPurchase extends Document {
   subcategory_id?: mongoose.Types.ObjectId;
   period_id?: mongoose.Types.ObjectId;
   family_id?: mongoose.Types.ObjectId;
+  fingerprint?: string;
   is_sample?: boolean;
   created_at: Date;
   updated_at: Date;
@@ -28,6 +29,7 @@ const PurchaseSchema = new Schema<IPurchase>(
     subcategory_id: { type: Schema.Types.ObjectId },
     period_id: { type: Schema.Types.ObjectId, ref: "Period" },
     family_id: { type: Schema.Types.ObjectId, ref: "Family" },
+    fingerprint: { type: String },
     is_sample: { type: Boolean },
   },
   {
@@ -36,6 +38,10 @@ const PurchaseSchema = new Schema<IPurchase>(
 );
 
 PurchaseSchema.index({ family_id: 1, period_id: 1 });
+PurchaseSchema.index(
+  { family_id: 1, period_id: 1, fingerprint: 1 },
+  { unique: true, sparse: true }
+);
 
 export const Purchase =
   mongoose.models.Purchase ||

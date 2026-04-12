@@ -52,21 +52,6 @@ export async function importCSV(
   const uniqueDescriptions = [...new Set(validRows.map((r: ParsedRow) => `${r.csv_category}|${r.csv_description}`))];
   const mapping = await classifyWithAI(uniqueDescriptions, subcategories, userId, periodId, familyId);
 
-  // Load existing fingerprints for dedup
-  const existingPurchases = await Purchase.find({
-    period_id: periodId,
-    purchase_type: purchaseType,
-    ...(familyId ? { family_id: familyId } : {}),
-  }).lean();
-
-  const existingFingerprints = new Set(
-    existingPurchases.map((p: Record<string, unknown>) => {
-      const d = p.purchase_date as Date;
-      const dateStr = `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
-      return `${dateStr}|${p.value}|${p.description}`;
-    })
-  );
-
   let created = 0;
   let skipped = 0;
   const errors: string[] = [];
@@ -84,12 +69,6 @@ export async function importCSV(
       description += ` [Cartão ${row.card_last_digits}]`;
     }
 
-    if (existingFingerprints.has(fingerprint)) {
-      skipped++;
-      items.push({ description, subcategory: "", value: row.value, date: row.date, status: "skipped" });
-      continue;
-    }
-
     let subcatName = "";
     try {
       const descKey = `${row.csv_category}|${row.csv_description}`;
@@ -104,19 +83,36 @@ export async function importCSV(
       if (year < 100) year += 2000;
       const dateObj = new Date(year, parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
 
-      await Purchase.create({
-        value: row.value,
-        purchase_date: dateObj,
-        purchase_type: purchaseType,
-        description,
-        subcategory_id: subcatId || undefined,
-        subcategory_name: subcatName,
-        period_id: periodId,
-        ...(familyId ? { family_id: familyId } : {}),
-      });
+      // Atomic upsert: unique index on (family_id, period_id, fingerprint) prevents duplicates
+      const result = await Purchase.findOneAndUpdate(
+        {
+          family_id: familyId || undefined,
+          period_id: periodId,
+          fingerprint,
+        },
+        {
+          $setOnInsert: {
+            value: row.value,
+            purchase_date: dateObj,
+            purchase_type: purchaseType,
+            description,
+            subcategory_id: subcatId || undefined,
+            subcategory_name: subcatName,
+            period_id: periodId,
+            fingerprint,
+            ...(familyId ? { family_id: familyId } : {}),
+          },
+        },
+        { upsert: true, new: true, rawResult: true }
+      );
 
-      created++;
-      items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "created" });
+      if (result.lastErrorObject?.updatedExisting) {
+        skipped++;
+        items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "skipped" });
+      } else {
+        created++;
+        items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "created" });
+      }
     } catch (err) {
       errors.push(`Erro ao criar: ${description} - ${(err as Error).message}`);
       items.push({ description, subcategory: subcatName, value: row.value, date: row.date, status: "error", error: (err as Error).message });

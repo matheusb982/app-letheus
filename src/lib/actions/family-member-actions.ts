@@ -121,38 +121,65 @@ export async function addMyFamilyMember(data: FormData) {
   if (!email || !password) return { error: "Email e senha são obrigatórios" };
   if (password.length < 6) return { error: "Senha deve ter no mínimo 6 caracteres" };
 
-  // Check member limit
-  const currentCount = await User.countDocuments({ family_id: family._id });
-  if (currentCount >= MEMBER_LIMIT) {
-    return { error: `Limite de ${MEMBER_LIMIT} membros atingido` };
-  }
-
   const existingUser = await User.findOne({ email });
   if (existingUser) return { error: "Email já cadastrado" };
 
   const encrypted_password = await bcrypt.hash(password, 12);
-  const newMember = await User.create({
-    email,
-    fullname,
-    encrypted_password,
-    family_id: family._id,
-    family_role: "member",
-    onboarding_completed: true,
-  });
 
-  // Audit log
-  await AuditLog.create({
-    family_id: family._id,
-    actor_id: session.user.id,
-    actor_email: session.user.email,
-    action: "member_added",
-    target_id: newMember._id,
-    target_email: email,
-    details: `${session.user.email} adicionou ${email} à família`,
-  });
+  // Transaction garante atomicidade: countDocuments + create não sofre TOCTOU
+  const txSession = await mongoose.startSession();
+  try {
+    let result: { error?: string; success?: boolean } = { error: "Erro inesperado" };
 
-  revalidatePath("/family");
-  return { success: true };
+    await txSession.withTransaction(async () => {
+      const currentCount = await User.countDocuments(
+        { family_id: family._id },
+        { session: txSession }
+      );
+      if (currentCount >= MEMBER_LIMIT) {
+        result = { error: `Limite de ${MEMBER_LIMIT} membros atingido` };
+        return;
+      }
+
+      const [newMember] = await User.create(
+        [
+          {
+            email,
+            fullname,
+            encrypted_password,
+            family_id: family._id,
+            family_role: "member",
+            onboarding_completed: true,
+          },
+        ],
+        { session: txSession }
+      );
+
+      await AuditLog.create(
+        [
+          {
+            family_id: family._id,
+            actor_id: session.user.id,
+            actor_email: session.user.email,
+            action: "member_added",
+            target_id: newMember._id,
+            target_email: email,
+            details: `${session.user.email} adicionou ${email} à família`,
+          },
+        ],
+        { session: txSession }
+      );
+
+      result = { success: true };
+    });
+
+    if (result.success) {
+      revalidatePath("/family");
+    }
+    return result;
+  } finally {
+    await txSession.endSession();
+  }
 }
 
 export async function removeMyFamilyMember(userId: string) {
