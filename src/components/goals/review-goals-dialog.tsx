@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, Loader2, TrendingUp, TrendingDown, Minus, Check, ArrowRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sparkles, Loader2, TrendingUp, TrendingDown, Minus, Check, ArrowRight, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/format";
 import { toast } from "sonner";
@@ -21,6 +22,19 @@ import {
 } from "@/lib/actions/goal-suggestions";
 import { useRouter } from "next/navigation";
 
+function formatBRL(cents: number): string {
+  const reais = cents / 100;
+  return reais.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function parseCentsFromDisplay(display: string): number {
+  const digits = display.replace(/\D/g, "");
+  return parseInt(digits || "0", 10);
+}
+
 export function ReviewGoalsDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -28,11 +42,21 @@ export function ReviewGoalsDialog() {
   const [applying, startApplying] = useTransition();
   const [data, setData] = useState<GoalSuggestionsResult | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editedValues, setEditedValues] = useState<Map<string, number>>(new Map());
+
+  const getEffectiveValue = useCallback((goalId: string, originalSuggested: number) => {
+    return editedValues.get(goalId) ?? originalSuggested;
+  }, [editedValues]);
+
+  const totalEdited = data
+    ? data.suggestions.reduce((sum, s) => sum + getEffectiveValue(s.goal_id, s.suggested_value), 0)
+    : 0;
 
   function handleOpen() {
     setOpen(true);
     setData(null);
     setSelected(new Set());
+    setEditedValues(new Map());
     startLoading(async () => {
       const result = await getGoalSuggestions();
       setData(result);
@@ -58,7 +82,7 @@ export function ReviewGoalsDialog() {
   function toggleAll() {
     if (!data) return;
     const changedIds = data.suggestions
-      .filter((s) => Math.abs(s.suggested_value - s.current_value) > 0.01)
+      .filter((s) => Math.abs(getEffectiveValue(s.goal_id, s.suggested_value) - s.current_value) > 0.01)
       .map((s) => s.goal_id);
     if (selected.size === changedIds.length) {
       setSelected(new Set());
@@ -67,11 +91,35 @@ export function ReviewGoalsDialog() {
     }
   }
 
+  function handleEditValue(goalId: string, cents: number) {
+    const value = Math.round(cents) / 100;
+    setEditedValues((prev) => {
+      const next = new Map(prev);
+      next.set(goalId, value);
+      return next;
+    });
+    // Auto-select when user edits a value
+    setSelected((prev) => {
+      if (prev.has(goalId)) return prev;
+      const next = new Set(prev);
+      next.add(goalId);
+      return next;
+    });
+  }
+
+  function resetValue(goalId: string) {
+    setEditedValues((prev) => {
+      const next = new Map(prev);
+      next.delete(goalId);
+      return next;
+    });
+  }
+
   function handleApply() {
     if (!data) return;
     const updates = data.suggestions
       .filter((s) => selected.has(s.goal_id))
-      .map((s) => ({ goal_id: s.goal_id, value: s.suggested_value }));
+      .map((s) => ({ goal_id: s.goal_id, value: getEffectiveValue(s.goal_id, s.suggested_value) }));
 
     if (updates.length === 0) {
       toast.info("Nenhuma sugestao selecionada");
@@ -101,7 +149,7 @@ export function ReviewGoalsDialog() {
   };
 
   const changedCount = data?.suggestions.filter(
-    (s) => Math.abs(s.suggested_value - s.current_value) > 0.01
+    (s) => Math.abs(getEffectiveValue(s.goal_id, s.suggested_value) - s.current_value) > 0.01
   ).length ?? 0;
 
   return (
@@ -141,9 +189,9 @@ export function ReviewGoalsDialog() {
                   <p className="text-xs text-muted-foreground">Total Sugerido</p>
                   <p className={cn(
                     "text-sm font-semibold",
-                    data.total_suggested < data.total_current_goals ? "text-emerald-600" : "text-amber-600"
+                    totalEdited < data.total_current_goals ? "text-emerald-600" : "text-amber-600"
                   )}>
-                    {formatCurrency(data.total_suggested)}
+                    {formatCurrency(totalEdited)}
                   </p>
                 </div>
               </div>
@@ -169,13 +217,16 @@ export function ReviewGoalsDialog() {
                   </thead>
                   <tbody className="divide-y">
                     {data.suggestions.map((s) => {
-                      const changed = Math.abs(s.suggested_value - s.current_value) > 0.01;
+                      const effectiveValue = getEffectiveValue(s.goal_id, s.suggested_value);
+                      const changed = Math.abs(effectiveValue - s.current_value) > 0.01;
+                      const isEdited = editedValues.has(s.goal_id);
                       const pctDiff = s.current_value > 0
-                        ? ((s.suggested_value - s.current_value) / s.current_value * 100)
+                        ? ((effectiveValue - s.current_value) / s.current_value * 100)
                         : 0;
+                      const cents = Math.round(effectiveValue * 100);
 
                       return (
-                        <tr key={s.goal_id} className={cn(!changed && "opacity-60")}>
+                        <tr key={s.goal_id} className={cn(!changed && !isEdited && "opacity-60")}>
                           <td className="p-2">
                             {changed ? (
                               <Checkbox
@@ -207,14 +258,41 @@ export function ReviewGoalsDialog() {
                           <td className="p-2 text-center">
                             {changed && <ArrowRight className="h-3.5 w-3.5 text-muted-foreground mx-auto" />}
                           </td>
-                          <td className={cn(
-                            "p-2 text-right font-mono text-xs font-semibold",
-                            changed && pctDiff < 0 && "text-emerald-600",
-                            changed && pctDiff > 0 && "text-amber-600"
-                          )}>
-                            {formatCurrency(s.suggested_value)}
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <div className="relative">
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={cents > 0 ? `R$ ${formatBRL(cents)}` : ""}
+                                  onChange={(e) => handleEditValue(s.goal_id, parseCentsFromDisplay(e.target.value))}
+                                  className={cn(
+                                    "h-7 w-[120px] text-right font-mono text-xs pr-1.5 pl-1.5",
+                                    changed && pctDiff < 0 && "text-emerald-600 font-semibold",
+                                    changed && pctDiff > 0 && "text-amber-600 font-semibold",
+                                    !changed && "text-muted-foreground",
+                                    isEdited && "border-violet-300 bg-violet-50 dark:bg-violet-950/20"
+                                  )}
+                                  placeholder="R$ 0,00"
+                                />
+                              </div>
+                              {isEdited && (
+                                <button
+                                  type="button"
+                                  onClick={() => resetValue(s.goal_id)}
+                                  className="text-muted-foreground hover:text-foreground"
+                                  title="Restaurar sugestão da IA"
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
                             {changed && (
-                              <span className="block text-[10px] font-normal">
+                              <span className={cn(
+                                "block text-[10px] font-normal mt-0.5",
+                                pctDiff < 0 && "text-emerald-600",
+                                pctDiff > 0 && "text-amber-600"
+                              )}>
                                 {pctDiff > 0 ? "+" : ""}{pctDiff.toFixed(0)}%
                               </span>
                             )}
