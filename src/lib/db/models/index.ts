@@ -12,3 +12,5 @@ export { CachedResponse, type ICachedResponse } from "./cached-response";
 export { ClassificationRule, type IClassificationRule } from "./classification-rule";
 export { AuditLog, type IAuditLog } from "./audit-log";
 export { Feedback, type IFeedback } from "./feedback";
+export { WhatsAppLink, type IWhatsAppLink } from "./whatsapp-link";
+export { WhatsAppSession, type IWhatsAppSession, type IPendingExpense } from "./whatsapp-session";

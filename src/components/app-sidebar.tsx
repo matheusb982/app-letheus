@@ -17,6 +17,7 @@ import {
   TrendingUp,
   MessageSquarePlus,
   MessageSquareText,
+  Smartphone,
 } from "lucide-react";
 import { signOutAction } from "@/lib/actions/sign-out-action";
 import { FeedbackDialog } from "@/components/shared/feedback-dialog";
@@ -52,6 +53,7 @@ const navItems = [
   { href: "/patrimonies", label: "Patrimônio", icon: Landmark },
   { href: "/categories", label: "Categorias", icon: FolderTree },
   { href: "/chat", label: "Assistente IA", icon: MessageCircle },
+  { href: "/whatsapp", label: "WhatsApp", icon: Smartphone },
 ];
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
