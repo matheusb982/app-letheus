@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,45 +14,61 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { forgotPasswordAction, type ActionState } from "@/lib/actions/auth-actions";
+import { resetPasswordAction, type ActionState } from "@/lib/actions/auth-actions";
 
-export default function ForgotPasswordPage() {
+export default function ResetPasswordPage() {
+  const { token } = useParams<{ token: string }>();
+
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
-    forgotPasswordAction,
+    resetPasswordAction,
     {}
   );
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Recuperar Senha</CardTitle>
+        <CardTitle className="text-2xl">Nova Senha</CardTitle>
         <CardDescription>
           {state.success
-            ? "Verifique seu email para as instruções de recuperação"
-            : "Informe seu email para receber o link de recuperação"}
+            ? "Sua senha foi redefinida com sucesso!"
+            : "Digite sua nova senha"}
         </CardDescription>
       </CardHeader>
       {!state.success ? (
         <form action={formAction}>
+          <input type="hidden" name="token" value={token} />
           <CardContent className="space-y-4">
             {state.error && (
               <p className="text-sm text-destructive text-center">{state.error}</p>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="password">Nova senha</Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="seu@email.com"
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
                 required
-                autoComplete="email"
+                minLength={6}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder="Repita a senha"
+                required
+                minLength={6}
+                autoComplete="new-password"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Enviando..." : "Enviar link de recuperação"}
+              {isPending ? "Redefinindo..." : "Redefinir senha"}
             </Button>
             <Link
               href="/login"
@@ -64,8 +81,8 @@ export default function ForgotPasswordPage() {
       ) : (
         <CardFooter>
           <Link href="/login" className="w-full">
-            <Button variant="outline" className="w-full">
-              Voltar para o login
+            <Button className="w-full">
+              Fazer login
             </Button>
           </Link>
         </CardFooter>

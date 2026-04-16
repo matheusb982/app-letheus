@@ -3,7 +3,9 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { signIn } from "@/lib/auth";
-import { loginSchema, registerSchema } from "@/lib/validations/auth";
+import crypto from "crypto";
+import { loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validations/auth";
+import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { connectDB } from "@/lib/db/connection";
@@ -145,4 +147,101 @@ export async function registerAction(
   }
 
   redirect("/onboarding");
+}
+
+export async function forgotPasswordAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const raw = { email: formData.get("email") as string };
+
+  const parsed = forgotPasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0].message };
+  }
+
+  const email = parsed.data.email.toLowerCase();
+
+  // Rate limit: 3 attempts per email per 15 minutes
+  const rateLimitKey = `forgot-password:${email}`;
+  const { allowed, retryAfterSeconds } = checkRateLimit(rateLimitKey, 3);
+  if (!allowed) {
+    const minutes = Math.ceil(retryAfterSeconds / 60);
+    return { error: `Muitas tentativas. Tente novamente em ${minutes} minuto${minutes > 1 ? "s" : ""}.` };
+  }
+
+  await connectDB();
+
+  const user = await User.findOne({ email });
+
+  // Always return success to prevent email enumeration
+  if (!user) {
+    return { success: true };
+  }
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  await User.findByIdAndUpdate(user._id, {
+    reset_password_token: hashedToken,
+    reset_password_sent_at: new Date(),
+  });
+
+  try {
+    await sendPasswordResetEmail(email, token, user.fullname);
+  } catch {
+    return { error: "Falha ao enviar email. Tente novamente mais tarde." };
+  }
+
+  return { success: true };
+}
+
+export async function resetPasswordAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const token = formData.get("token") as string;
+  const raw = {
+    password: formData.get("password") as string,
+    confirmPassword: formData.get("confirmPassword") as string,
+  };
+
+  if (!token) {
+    return { error: "Token de recuperação inválido." };
+  }
+
+  // Rate limit: 5 attempts per token per 15 minutes (prevents brute force)
+  const rateLimitKey = `reset-password:${token.substring(0, 16)}`;
+  const { allowed, retryAfterSeconds } = checkRateLimit(rateLimitKey);
+  if (!allowed) {
+    const minutes = Math.ceil(retryAfterSeconds / 60);
+    return { error: `Muitas tentativas. Tente novamente em ${minutes} minuto${minutes > 1 ? "s" : ""}.` };
+  }
+
+  const parsed = resetPasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0].message };
+  }
+
+  await connectDB();
+
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    reset_password_token: hashedToken,
+    reset_password_sent_at: { $gt: new Date(Date.now() - 60 * 60 * 1000) }, // 1 hour
+  });
+
+  if (!user) {
+    return { error: "Link expirado ou inválido. Solicite um novo link de recuperação." };
+  }
+
+  const encrypted_password = await bcrypt.hash(parsed.data.password, 12);
+
+  await User.findByIdAndUpdate(user._id, {
+    encrypted_password,
+    $unset: { reset_password_token: "", reset_password_sent_at: "" },
+  });
+
+  return { success: true };
 }

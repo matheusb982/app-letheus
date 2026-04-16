@@ -9,7 +9,8 @@ export const authConfig: NextAuthConfig = {
       const isAuthPage =
         pathname.startsWith("/login") ||
         pathname.startsWith("/register") ||
-        pathname.startsWith("/forgot-password");
+        pathname.startsWith("/forgot-password") ||
+        pathname.startsWith("/reset-password");
       const isLandingPage = pathname === "/";
 
       if (isLandingPage) {
