@@ -14,6 +14,8 @@ Reescrita do SmartFinancial (Rails 7 + MongoDB) para Next.js 15. Multi-tenant po
 - **Validação**: Zod 3
 - **Gráficos**: Recharts 3
 - **Testes**: Vitest 4 (unit) + Playwright (E2E)
+- **Email**: Resend (emails transacionais)
+- **Cron**: Vercel Cron Jobs (aviso de trial)
 - **CSV**: papaparse
 
 ## Estrutura de Diretórios
@@ -21,7 +23,7 @@ Reescrita do SmartFinancial (Rails 7 + MongoDB) para Next.js 15. Multi-tenant po
 ```
 src/
 ├── app/
-│   ├── (auth)/           # Login, Register, Forgot Password (sem sidebar)
+│   ├── (auth)/           # Login, Register, Forgot Password, Reset Password (sem sidebar)
 │   ├── (dashboard)/      # Todas as páginas autenticadas (com sidebar + header)
 │   │   ├── dashboard/    # KPIs + tabela categorias
 │   │   ├── purchases/    # CRUD + import CSV/texto + gráfico anual
@@ -35,7 +37,8 @@ src/
 │   ├── onboarding/       # Wizard de onboarding (5 etapas)
 │   └── api/
 │       ├── auth/         # NextAuth handlers
-│       └── chat/         # Streaming endpoint (AI SDK v6)
+│       ├── chat/         # Streaming endpoint (AI SDK v6)
+│       └── cron/         # Vercel Cron Jobs (trial-expiring)
 ├── components/
 │   ├── ui/               # shadcn (NÃO editar manualmente, usar `npx shadcn add`)
 │   ├── layout/           # sidebar, header, period-selector, user-menu
@@ -55,7 +58,7 @@ src/
 │   │   ├── connection.ts # Mongoose singleton
 │   │   └── models/       # 13 models (inclui Family, AuditLog)
 │   ├── actions/          # Server Actions (CRUD, dashboard, chart, chat, import, period, family, onboarding)
-│   ├── services/         # Lógica de negócio (csv-import, text-import, ai-classifier, ai-provider, payments-per-category)
+│   ├── services/         # Lógica de negócio (csv-import, text-import, ai-classifier, ai-provider, payments-per-category, email-service)
 │   ├── validations/      # Zod schemas por entidade
 │   └── utils/            # format, months, constants, cn
 ├── hooks/
@@ -105,7 +108,16 @@ npm run lint         # ESLint
 - Senhas compatíveis com bcrypt do Devise (Rails): `$2a$` hash
 - JWT contém `userId`, `periodId` e `familyId`
 - Period é relido do DB em mutations (não confiar no JWT para escrita)
-- Middleware protege todas as rotas exceto `/login`, `/register`, `/forgot-password`
+- Middleware protege todas as rotas exceto `/login`, `/register`, `/forgot-password`, `/reset-password`
+
+### Email (Resend)
+- `email-service.ts` centraliza todos os envios via Resend
+- **Recuperação de senha**: token SHA256 com 256 bits, hasheado no DB, expira em 1h, uso único
+- Anti-enumeração: forgot-password retorna sucesso mesmo se email não existe
+- Rate limit: 3 req/15min no forgot, 5 req/15min no reset
+- Sanitização XSS nos templates (escapeHtml no userName)
+- **Aviso de trial**: cron diário às 12h UTC envia email para owner quando faltam 3 dias e 1 dia
+- Cron protegido por `CRON_SECRET` (Bearer token) — response não expõe dados sensíveis
 
 ### IDs Hardcoded
 - Aporte subcategory IDs: `674f65d9e182e26ad80cc636`, `674f65d9e182e26ad80cc635` (definidos em `constants.ts`)
@@ -172,6 +184,9 @@ OPENAI_API_KEY=...
 GOOGLE_GENERATIVE_AI_API_KEY=...
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=http://localhost:3000
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=noreply@letheus.com.br
+CRON_SECRET=...
 ```
 
 ### Ambiente Local (desenvolvimento)
@@ -181,6 +196,9 @@ OPENAI_API_KEY=...
 GOOGLE_GENERATIVE_AI_API_KEY=...
 NEXTAUTH_SECRET=dev-secret-key-for-local-testing-only
 NEXTAUTH_URL=http://localhost:3001
+RESEND_API_KEY=re_...
+RESEND_FROM_EMAIL=noreply@letheus.com.br
+CRON_SECRET=dev-cron-secret
 ```
 
 > MongoDB local roda na porta **27018** via Docker (`docker-compose.yml`)
