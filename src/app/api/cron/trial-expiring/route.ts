@@ -33,7 +33,8 @@ export async function GET(request: Request) {
     ],
   }).lean<IFamily[]>();
 
-  const results: { email: string; days: number; status: string }[] = [];
+  let sent = 0;
+  let failed = 0;
 
   for (const family of families) {
     const owner = await User.findById(family.owner_id).lean<IUser>();
@@ -49,17 +50,16 @@ export async function GET(request: Request) {
 
     try {
       await sendTrialExpiringEmail(owner.email, owner.fullname, notifyDays);
-      results.push({ email: owner.email, days: notifyDays, status: "sent" });
+      sent++;
     } catch (error) {
       console.error(`Failed to send trial email to ${owner.email}:`, error);
-      results.push({ email: owner.email, days: notifyDays, status: "failed" });
+      failed++;
     }
   }
 
   return NextResponse.json({
     processed: families.length,
-    sent: results.filter((r) => r.status === "sent").length,
-    failed: results.filter((r) => r.status === "failed").length,
-    results,
+    sent,
+    failed,
   });
 }

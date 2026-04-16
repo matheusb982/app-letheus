@@ -19,6 +19,8 @@ App de gestão financeira pessoal com IA, construído com Next.js 15, shadcn/ui 
 - **Exclusão de conta/família** com anonimização (LGPD)
 - **Audit log** de todas as ações de gestão de membros
 - **Fallback automático entre provedores de IA** (OpenAI ↔ Gemini)
+- **Recuperação de senha** via email (Resend) com token seguro e expiração
+- **Aviso de trial expirando** — email automático faltando 3 dias e 1 dia (Vercel Cron)
 
 ## Stack
 
@@ -31,6 +33,8 @@ App de gestão financeira pessoal com IA, construído com Next.js 15, shadcn/ui 
 | IA | Vercel AI SDK v6 + OpenAI GPT-4o + Gemini 2.5 Flash |
 | Validação | Zod 3 |
 | Gráficos | Recharts 3 |
+| Email | Resend |
+| Cron | Vercel Cron Jobs |
 | Testes | Vitest 4 + Playwright |
 
 ## Setup
@@ -66,6 +70,9 @@ npm run test:e2e
 | `GOOGLE_GENERATIVE_AI_API_KEY` | API key do Google Gemini (fallback) |
 | `NEXTAUTH_SECRET` | Secret para JWT (`openssl rand -base64 32`) |
 | `NEXTAUTH_URL` | URL base da aplicação |
+| `RESEND_API_KEY` | API key do Resend (emails transacionais) |
+| `RESEND_FROM_EMAIL` | Email remetente (ex: `noreply@letheus.com.br`) |
+| `CRON_SECRET` | Secret para autenticação dos cron jobs (`openssl rand -base64 32`) |
 
 ### Ambiente Local
 
