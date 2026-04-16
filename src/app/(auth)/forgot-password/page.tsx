@@ -49,7 +49,7 @@ export default function ForgotPasswordPage() {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-3">
+          <CardFooter className="flex flex-col gap-3 pt-6">
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? "Enviando..." : "Enviar link de recuperação"}
             </Button>

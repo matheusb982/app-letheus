@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction, type ActionState } from "@/lib/actions/auth-actions";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -70,6 +71,14 @@ export default function LoginPage() {
                       autoComplete="current-password"
                     />
                   </Field>
+                  <div className="flex justify-end">
+                    <Link
+                      href="/forgot-password"
+                      className="text-sm text-muted-foreground hover:text-primary"
+                    >
+                      Esqueceu a senha?
+                    </Link>
+                  </div>
                   <Field>
                     <Button type="submit" className="w-full" disabled={isPending}>
                       {isPending && <Loader2 className="animate-spin" />}
