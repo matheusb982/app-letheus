@@ -1,5 +1,6 @@
 import { generateTextWithFallback } from "./ai-provider";
 import { matchRules, getFewShotExamples } from "./classification-rules";
+import { sanitizeDescription, validateSubcategoryIds } from "./ai-sanitizer";
 
 interface SubcategoryOption {
   id: string;
@@ -54,13 +55,26 @@ ${examples.map((e) => `- "${e.description}" → ${e.subcategory_name}`).join("\n
     }
   }
 
-  // Step 3: Classificar o restante com IA
+  // Step 3: Classificar o restante com IA (limite de batch para controlar custo)
+  const MAX_BATCH = 500;
+  if (remaining.length > MAX_BATCH) {
+    // Classificar apenas o batch; o restante vai para fallback
+    const overflow = remaining.slice(MAX_BATCH);
+    remaining = remaining.slice(0, MAX_BATCH);
+    if (fallbackId) {
+      for (const desc of overflow) {
+        mapping.set(desc, fallbackId);
+      }
+    }
+  }
+
   const subcatList = subcategories
     .map((s) => `${s.id}: ${s.name}`)
     .join("\n");
 
+  // Sanitiza descrições para evitar prompt injection via newlines ou caracteres de controle
   const descList = remaining
-    .map((d, i) => `${i}: ${d}`)
+    .map((d, i) => `${i}: ${sanitizeDescription(d)}`)
     .join("\n");
 
   const prompt = `Você é um classificador de despesas financeiras pessoais.
@@ -101,7 +115,11 @@ Onde a chave é o índice da despesa e o valor é o ID da subcategoria correspon
       return applyFallback(remaining, mapping, fallbackId);
     }
 
-    const parsed = JSON.parse(jsonMatch[0]) as Record<string, string>;
+    const rawParsed = JSON.parse(jsonMatch[0]) as Record<string, string>;
+
+    // Validar que os IDs retornados pela IA existem nas subcategorias
+    const validIds = new Set(subcategories.map((s) => s.id));
+    const parsed = validateSubcategoryIds(rawParsed, validIds, fallbackId);
 
     for (const [indexStr, subcatId] of Object.entries(parsed)) {
       const index = parseInt(indexStr);

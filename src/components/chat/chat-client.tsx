@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -404,7 +405,7 @@ export function ChatClient({
                           <p className="text-sm leading-relaxed">{m.content}</p>
                         ) : m.content ? (
                           <div className="text-sm leading-relaxed prose prose-sm prose-neutral dark:prose-invert max-w-none [&>p]:my-1 [&>ul]:my-2 [&>ol]:my-2 [&>li]:my-0.5">
-                            <ReactMarkdown>{m.content}</ReactMarkdown>
+                            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{m.content}</ReactMarkdown>
                           </div>
                         ) : (
                           <TypingIndicator />
