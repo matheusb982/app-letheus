@@ -154,12 +154,11 @@ ${financialContext}
 ${historyText ? `<conversation_history>\n${historyText}\n</conversation_history>` : ""}`;
 
   try {
-    const result = await streamTextWithFallback("openai", {
+    return await streamTextWithFallback("openai", {
       system: systemPrompt,
       messages,
       maxOutputTokens: 4096,
       async onFinish({ text }: { text: string }) {
-        // Save conversation and cache
         await saveConversation(session!.user.id, familyId, chatSessionId, userMessage, text);
         await CachedResponse.create({
           user_id: session!.user.id,
@@ -167,12 +166,10 @@ ${historyText ? `<conversation_history>\n${historyText}\n</conversation_history>
           question_hash: questionHash,
           question: userMessage,
           answer: text,
-          expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000), // 3 hours
+          expires_at: new Date(Date.now() + 3 * 60 * 60 * 1000),
         });
       },
     });
-
-    return result.toTextStreamResponse();
   } catch (error) {
     console.error("Chat API error:", error);
     return new Response(
